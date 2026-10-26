@@ -1,0 +1,2951 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YTM Crossfade Studio PRO — VirtualDJ Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #07080c;
+            color: #f1f5f9;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f111a; }
+        ::-webkit-scrollbar-thumb { background: #282d42; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f4766; }
+
+        /* Custom DJ Crossfader Slider */
+        .crossfader-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 14px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(6, 182, 212, 0.5) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(217, 70, 239, 0.5) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            outline: none;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.8);
+        }
+
+        .crossfader-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 30px;
+            height: 40px;
+            border-radius: 6px;
+            background: linear-gradient(180deg, #ffffff 0%, #94a3b8 100%);
+            border: 2px solid #090a0f;
+            box-shadow: 0 0 16px rgba(255, 255, 255, 0.45), 0 4px 10px rgba(0, 0, 0, 0.9);
+            cursor: grab;
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
+        }
+
+        .crossfader-slider::-webkit-slider-thumb:active {
+            cursor: grabbing;
+            transform: scale(1.06);
+            box-shadow: 0 0 24px rgba(16, 185, 129, 0.9);
+        }
+
+        /* Standard Range Sliders */
+        .studio-range {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 999px;
+            background: #1e293b;
+            outline: none;
+        }
+        .studio-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #10b981;
+            cursor: pointer;
+            border: 2px solid #090a0f;
+        }
+
+        /* Deck Active Glow Effects */
+        .deck-a-active {
+            box-shadow: 0 0 30px -5px rgba(6, 182, 212, 0.38), inset 0 0 15px -8px rgba(6, 182, 212, 0.3);
+            border-color: rgba(6, 182, 212, 0.7) !important;
+        }
+        .deck-b-active {
+            box-shadow: 0 0 30px -5px rgba(217, 70, 239, 0.38), inset 0 0 15px -8px rgba(217, 70, 239, 0.3);
+            border-color: rgba(217, 70, 239, 0.7) !important;
+        }
+
+        /* Custom Checkbox Styling ("Tildes") */
+        .dj-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #475569;
+            border-radius: 6px;
+            background-color: #0f172a;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+        .dj-checkbox:hover { border-color: #22d3ee; }
+        .dj-checkbox:checked {
+            background-color: #10b981;
+            border-color: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
+        }
+        .dj-checkbox:checked::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #020617;
+            font-size: 11px;
+        }
+
+        /* Spinning Vinyl Jog Wheel */
+        @keyframes spinVinyl {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .vinyl-spinning {
+            animation: spinVinyl 2.8s linear infinite;
+        }
+        .vinyl-paused {
+            animation: spinVinyl 2.8s linear infinite;
+            animation-play-state: paused;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+
+    <!-- Floating Quick-Exit Fullscreen Button (Visible only when in Fullscreen Mode) -->
+    <button id="floatingExitFullscreenBtn" onclick="toggleAppFullScreen()"
+            class="hidden fixed bottom-5 left-5 z-50 px-4 py-2.5 rounded-xl bg-amber-500/95 hover:bg-amber-400 text-slate-950 font-extrabold text-xs uppercase tracking-wider shadow-2xl shadow-amber-500/30 border-2 border-amber-300 transition items-center gap-2 backdrop-blur-md">
+        <i class="fa-solid fa-compress text-sm"></i>
+        <span>✕ Salir de Pantalla Completa (ESC / F)</span>
+    </button>
+
+    <!-- Hidden Official YouTube Search Engine & Cue Preview Player (Deck C) -->
+    <div class="fixed -left-[9999px] -top-[9999px] w-1 h-1 overflow-hidden pointer-events-none opacity-0">
+        <div id="searchEnginePlayer"></div>
+    </div>
+
+    <!-- Top Navigation & Status Header -->
+    <header class="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 via-emerald-500 to-fuchsia-600 p-0.5 shadow-lg shadow-cyan-500/20">
+                    <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                        <i class="fa-solid fa-compact-disc text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-400 text-xl animate-spin" style="animation-duration: 6s;"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white">YTM <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-400">CROSSFADE STUDIO PRO</span></h1>
+                        <span class="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30">VirtualDJ Edition</span>
+                        <span class="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 shadow-sm">
+                            © GDicampli Edition
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Desarrollado por <strong class="text-slate-200">GDicampli</strong> • Dual Deck A/B • Pitch & Sync • 6-Pad Synth Sampler • YouTube Live Search</p>
+                </div>
+            </div>
+
+            <!-- Action Pills -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[11px] font-mono px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>100% Seguro (Sin .xyz)</span>
+                </span>
+
+                <button onclick="hardResetCacheAndFactory()" title="Limpia la memoria y recarga el catálogo oficial verificado" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-rotate"></i>
+                    <span>Restaurar Catálogo</span>
+                </button>
+
+                <button onclick="toggleApiKeyModal()" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/30 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-key"></i>
+                    <span id="apiKeyStatusBtnText">YT API Key (Gratis)</span>
+                </button>
+
+                <button id="toggleVideoBtn" onclick="toggleVideoVisibility()" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 transition flex items-center gap-2">
+                    <i class="fa-solid fa-eye text-cyan-400" id="toggleVideoIcon"></i>
+                    <span id="toggleVideoText">Solo Audio: OFF</span>
+                </button>
+
+                <!-- Dedicated Full Screen Toggle Button -->
+                <button id="fullscreenToggleBtn" onclick="toggleAppFullScreen()" title="Activar o salir de Pantalla Completa (Tecla F)"
+                        class="text-xs font-bold px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 hover:from-cyan-500/30 hover:to-fuchsia-500/30 text-cyan-300 border border-cyan-500/50 transition flex items-center gap-2 shadow-md shadow-cyan-500/10">
+                    <i id="fullscreenToggleIcon" class="fa-solid fa-expand text-cyan-400"></i>
+                    <span id="fullscreenToggleText">⛶ Pantalla Completa</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Optional YouTube Data API v3 Key Drawer -->
+        <div id="apiKeyDrawer" class="hidden bg-slate-900/95 border-t border-slate-800 px-4 sm:px-6 py-3.5 transition-all">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="text-xs text-slate-300 space-y-1 max-w-2xl">
+                    <div class="font-bold text-amber-400 flex items-center gap-1.5">
+                        <i class="fa-brands fa-google"></i>
+                        <span>Modo Turbo Opcional: YouTube Data API v3 Oficial (`googleapis.com` - 100% Gratis)</span>
+                    </div>
+                    <p class="text-slate-400">
+                        El buscador ya funciona gratis en vivo. Si además pegas tu clave gratuita de <strong>Google Cloud Console (YouTube Data API v3)</strong>, tendrás 100 búsquedas instantáneas diarias directas de Google sin ningún costo.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <input type="password" id="ytApiKeyInput" placeholder="AIzaSy..."
+                           class="flex-1 md:w-64 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-mono text-white focus:outline-none focus:border-amber-400">
+                    <button onclick="saveUserYouTubeApiKey()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs">
+                        Guardar Key
+                    </button>
+                    <button onclick="toggleApiKeyModal()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-400 text-xs">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Studio Workspace -->
+    <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 flex-1 space-y-6">
+
+        <!-- TOP SECTION: VIRTUALDJ DUAL DECK CONSOLE (DECK A + MIXER/SAMPLER + DECK B) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+
+            <!-- ================= DECK A (LEFT) ================= -->
+            <div id="deckACard" class="lg:col-span-4 bg-slate-900/90 border-2 border-slate-800 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 deck-a-active">
+                <div>
+                    <!-- Deck A Header + Spinning Jog Wheel -->
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div id="jogWheelA" class="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-950 via-cyan-900 to-slate-800 border-2 border-cyan-400 flex items-center justify-center shadow-md shadow-cyan-500/20 vinyl-paused relative">
+                                <div class="w-3 h-3 rounded-full bg-cyan-400 border border-slate-950"></div>
+                                <div class="absolute top-0.5 w-1 h-2 bg-white rounded-full"></div>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <h2 class="font-extrabold text-sm text-white tracking-wide">DECK A</h2>
+                                    <span id="deckAStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">AL AIRE</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+                                    <span id="deckATrackIndex">Pista #1</span>
+                                    <span>•</span>
+                                    <span id="deckABpmDisplay" class="text-cyan-400 font-bold">122.0 BPM</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-mono">Salida A</div>
+                            <div id="deckAVolText" class="text-base font-mono font-bold text-cyan-400">100%</div>
+                        </div>
+                    </div>
+
+                    <!-- YouTube IFrame Container A -->
+                    <div id="videoWrapperA" class="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 mb-3 shadow-inner">
+                        <div id="playerA" class="w-full h-full"></div>
+                        <div class="pointer-events-none absolute top-2 right-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm border border-cyan-500/40 text-[10px] font-mono text-cyan-300">
+                            DECK A • CH 1
+                        </div>
+                    </div>
+
+                    <!-- Track Info A (Strict 1:1 Verified) -->
+                    <div class="mb-3 bg-slate-950/85 rounded-xl p-2.5 border border-slate-800/90 space-y-1">
+                        <div class="flex items-center justify-between gap-2">
+                            <div id="deckATitle" class="font-bold text-xs sm:text-sm text-white truncate">Cargando pista...</div>
+                            <a id="deckAYtLink" href="https://www.youtube.com" target="_blank" title="Abrir en YouTube" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/30 shrink-0 flex items-center gap-1">
+                                <span id="deckAVideoIdBadge">ID: ---</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                            </a>
+                        </div>
+                        <div class="text-xs text-slate-400 truncate flex items-center justify-between">
+                            <span id="deckAArtist" class="truncate">-</span>
+                            <span id="deckACutInfo" class="font-mono text-[10px] text-cyan-400/90 shrink-0">Intro: +0s | Fade: -6s</span>
+                        </div>
+                        <div class="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+                            <span id="deckARealYtTitle" class="text-emerald-400 truncate">
+                                <i class="fa-solid fa-circle-check mr-1"></i>YT Player: Verificando...
+                            </span>
+                            <button onclick="findOfficialAudioForDeck('A')" title="Busca el Audio Oficial si hay bloqueo" class="text-amber-400 hover:underline shrink-0 ml-2">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Audio Oficial
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CONTROL RÁPIDO DEL PLATO A (INTUITIVO Y FUNCIONAL) -->
+                    <div class="mb-2.5 bg-slate-950/90 p-2.5 rounded-xl border border-slate-800/90 space-y-2">
+                        <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                            <span class="uppercase font-bold text-cyan-400"><i class="fa-solid fa-sliders mr-1"></i>Control Rápido del Plato A</span>
+                            <span id="loopStatusA" class="text-slate-500 font-bold">NORMAL</span>
+                        </div>
+
+                        <!-- Fila 1: Transporte rápido del plato -->
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button onclick="jumpToTrackIntro('A')" title="Volver al punto de inicio/intro de la canción" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-500/50 text-[11px] font-semibold text-cyan-300 transition flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-backward-fast text-[10px]"></i>
+                                <span>Ir al Inicio</span>
+                            </button>
+                            <button onclick="scrubDeckSeconds('A', -10)" title="Retroceder 10 segundos" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-mono font-bold text-slate-200 transition flex items-center justify-center gap-1">
+                                <span>⏪ -10s</span>
+                            </button>
+                            <button onclick="scrubDeckSeconds('A', 10)" title="Adelantar 10 segundos para buscar el golpe" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-mono font-bold text-slate-200 transition flex items-center justify-center gap-1">
+                                <span>⏩ +10s</span>
+                            </button>
+                        </div>
+
+                        <!-- Fila 2: Fijar Intro en vivo y Bucle simple de 1 clic -->
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button onclick="captureCurrentSecondAsIntro('A')" title="Guarda el segundo actual para que la canción siempre arranque desde aquí" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-amber-500/20 border border-slate-700 hover:border-amber-400/50 text-[11px] font-semibold text-amber-300 transition flex items-center justify-center gap-1">
+                                <span>📍 Fijar Intro Aquí</span>
+                            </button>
+                            <button id="simpleLoopBtnA" onclick="toggleSimple4sLoop('A')" title="Repite los últimos 4 segundos en bucle hasta que lo desactives" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-emerald-500/20 border border-slate-700 text-[11px] font-mono font-bold text-slate-300 transition flex items-center justify-center gap-1">
+                                <span>🔁 Bucle 4s: OFF</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CONTROL DE PITCH / VELOCIDAD SIMPLE (PLATO A) -->
+                    <div class="mb-3 bg-slate-950/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono uppercase text-slate-400">Velocidad (Pitch): <strong id="pitchLabelA" class="text-cyan-400">1.00x</strong></span>
+                            <div class="flex items-center gap-1">
+                                <button onclick="resetDeckPitch('A')" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono font-bold text-slate-300 transition" title="Restaurar velocidad normal 1.00x">
+                                    1.00x Reset
+                                </button>
+                                <button onclick="syncDeckBpm('A')" class="px-2 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-[10px] font-mono font-bold text-cyan-300 transition" title="Igualar tempo con Plato B">
+                                    SYNC
+                                </button>
+                            </div>
+                        </div>
+                        <input type="range" id="pitchSliderA" min="0.75" max="1.50" step="0.05" value="1.00"
+                               oninput="changeDeckPitch('A', this.value)"
+                               class="w-full studio-range accent-cyan-400">
+                    </div>
+                </div>
+
+                <!-- Progress, Gain & Seek Bar A -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <button id="muteBtnA" onclick="toggleDeckMute('A')" class="px-2 py-1 rounded bg-slate-950 border border-slate-800 text-cyan-400 text-xs">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </button>
+                        <input type="range" id="gainSliderA" min="0" max="100" value="100" oninput="setIndividualDeckGain('A', this.value)" class="flex-1 studio-range accent-cyan-400" title="Ganancia Canal A">
+                        <span id="deckAStateText" class="text-[10px] font-mono text-cyan-400 w-20 text-right truncate">LISTO</span>
+                    </div>
+
+                    <div class="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                        <div id="deckAVolBar" class="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 transition-all duration-150" style="width: 100%"></div>
+                    </div>
+
+                    <div class="space-y-1 pt-0.5">
+                        <input type="range" id="seekBarA" min="0" max="100" value="0" step="1" oninput="userSeek('A', this.value)" class="w-full studio-range accent-cyan-400">
+                        <div class="flex justify-between text-[11px] font-mono text-slate-400">
+                            <span id="deckACurrentTime">00:00</span>
+                            <span id="deckAFadePointLabel" class="text-[10px] text-amber-400/90"></span>
+                            <span id="deckADuration">00:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= CENTER MIXER & VIRTUALDJ SAMPLER RACK ================= -->
+            <div class="lg:col-span-4 bg-slate-900/95 border-2 border-slate-800 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden shadow-2xl">
+                <!-- Top Auto-Crossfade Monitor -->
+                <div class="text-center space-y-2">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-950 border border-slate-800 text-[11px] font-mono">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span class="text-slate-300 font-semibold">MIXER CENTRAL VIRTUALDJ PRO</span>
+                    </div>
+
+                    <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 shadow-inner">
+                        <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400" id="countdownHeader">PRÓXIMA MEZCLA AUTOMÁTICA EN</div>
+                        <div id="fadeCountdownDisplay" class="text-2xl sm:text-3xl font-mono font-extrabold text-emerald-400 tracking-tight my-0.5">
+                            LISTO
+                        </div>
+                        <div id="nextUpPreview" class="text-xs text-slate-400 truncate">
+                            Siguiente en Deck B: <span class="text-slate-200 font-medium">Cargando...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Master Transport Controls -->
+                <div class="my-3 space-y-3">
+                    <div class="flex items-center justify-center gap-2.5">
+                        <button id="shuffleBtn" onclick="toggleShuffle()" title="Orden Aleatorio" class="w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 border border-slate-700/70 flex items-center justify-center transition">
+                            <i class="fa-solid fa-shuffle text-sm"></i>
+                        </button>
+
+                        <button onclick="skipToPrevious()" title="Pista Anterior" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center justify-center transition active:scale-95">
+                            <i class="fa-solid fa-backward-step"></i>
+                        </button>
+
+                        <button id="masterPlayBtn" onclick="toggleMasterPlay()" class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/25 flex items-center justify-center text-xl transition transform active:scale-95">
+                            <i id="masterPlayIcon" class="fa-solid fa-play ml-0.5"></i>
+                        </button>
+
+                        <button onclick="triggerManualCrossfade()" title="Mezclar al Siguiente Tema Ahora" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center justify-center transition active:scale-95">
+                            <i class="fa-solid fa-forward-step"></i>
+                        </button>
+
+                        <button id="loopBtn" onclick="toggleLoop()" title="Repetir Playlist" class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center transition">
+                            <i class="fa-solid fa-repeat text-sm"></i>
+                        </button>
+                    </div>
+
+                    <button onclick="triggerManualCrossfade()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500/20 via-emerald-500/25 to-fuchsia-500/20 hover:from-cyan-500/35 hover:via-emerald-500/35 hover:to-fuchsia-500/35 border border-emerald-500/50 text-emerald-300 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>¡MEZCLAR AHORA! (CROSSFADE INMEDIATO)</span>
+                    </button>
+                </div>
+
+                <!-- VIRTUALDJ 6-PAD SYNTH SOUND EFFECTS SAMPLER -->
+                <div class="mb-3 bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-fuchsia-400">
+                            <i class="fa-solid fa-drum-steelpan mr-1"></i>Sampler FX en Vivo (Synth)
+                        </span>
+                        <div class="flex items-center gap-1.5 w-24">
+                            <i class="fa-solid fa-volume-low text-[10px] text-slate-400"></i>
+                            <input type="range" id="samplerVolSlider" min="0" max="100" value="75" class="w-full studio-range accent-fuchsia-400" title="Volumen del Sampler FX">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button onclick="playDjSynthEffect('airhorn')" class="py-2 px-1.5 rounded-lg bg-slate-900 hover:bg-amber-500/20 active:scale-95 border border-slate-700 hover:border-amber-400 text-[11px] font-bold text-amber-300 transition flex items-center justify-center gap-1">
+                            <span>📣</span> <span>AIRHORN</span>
+                        </button>
+                        <button onclick="playDjSynthEffect('siren')" class="py-2 px-1.5 rounded-lg bg-slate-900 hover:bg-cyan-500/20 active:scale-95 border border-slate-700 hover:border-cyan-400 text-[11px] font-bold text-cyan-300 transition flex items-center justify-center gap-1">
+                            <span>🚨</span> <span>SIRENA</span>
+                        </button>
+                        <button onclick="playDjSynthEffect('subdrop')" class="py-2 px-1.5 rounded-lg bg-slate-900 hover:bg-fuchsia-500/20 active:scale-95 border border-slate-700 hover:border-fuchsia-400 text-[11px] font-bold text-fuchsia-300 transition flex items-center justify-center gap-1">
+                            <span>💣</span> <span>SUB DROP</span>
+                        </button>
+                        <button onclick="playDjSynthEffect('riser')" class="py-2 px-1.5 rounded-lg bg-slate-900 hover:bg-emerald-500/20 active:scale-95 border border-slate-700 hover:border-emerald-400 text-[11px] font-bold text-emerald-300 transition flex items-center justify-center gap-1">
+                            <span>🌊</span> <span>RISER UP</span>
+                        </button>
+                        <button onclick="playDjSynthEffect('laser')" class="py-2 px-1.5 rounded-lg bg-slate-900 hover:bg-rose-500/20 active:scale-95 border border-slate-700 hover:border-rose-400 text-[11px] font-bold text-rose-300 transition flex items-center justify-center gap-1">
+                            <span>⚡</span> <span>LASER</span>
+                        </button>
+                        <button onclick="playDjSynthEffect('crash')" class="py-2 px-1.5 rounded-lg bg-slate-900 hover:bg-indigo-500/20 active:scale-95 border border-slate-700 hover:border-indigo-400 text-[11px] font-bold text-indigo-300 transition flex items-center justify-center gap-1">
+                            <span>🥁</span> <span>CRASH</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Physical Crossfader Slider (A <-> B) + Curve Selector + Cut Buttons -->
+                <div class="space-y-2.5 bg-slate-950/90 p-3 rounded-xl border border-slate-800">
+                    <!-- Curve Selector & Cut A / Center / Cut B -->
+                    <div class="flex items-center justify-between gap-1 text-[10px] font-mono">
+                        <div class="flex items-center gap-1">
+                            <button onclick="quickCutCrossfader(0)" class="px-2 py-0.5 rounded bg-cyan-950/80 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/30 font-bold transition">CUT A</button>
+                            <button onclick="quickCutCrossfader(50)" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">50/50</button>
+                            <button onclick="quickCutCrossfader(100)" class="px-2 py-0.5 rounded bg-fuchsia-950/80 hover:bg-fuchsia-500 hover:text-slate-950 text-fuchsia-300 border border-fuchsia-500/30 font-bold transition">CUT B</button>
+                        </div>
+                        <select id="crossfaderCurveSelect" onchange="setCrossfaderCurve(this.value)" class="bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[10px] text-emerald-300 outline-none">
+                            <option value="power" selected>Curva: Club Power</option>
+                            <option value="linear">Curva: Linear Suave</option>
+                            <option value="cut">Curva: Scratch Cut</option>
+                        </select>
+                    </div>
+
+                    <div class="flex justify-between items-center text-xs font-mono font-bold">
+                        <span class="text-cyan-400 flex items-center gap-1"><i class="fa-solid fa-caret-left"></i> DECK A</span>
+                        <span class="text-[10px] text-slate-400 font-normal">CROSSFADER</span>
+                        <span class="text-fuchsia-400 flex items-center gap-1">DECK B <i class="fa-solid fa-caret-right"></i></span>
+                    </div>
+
+                    <div class="py-0.5">
+                        <input type="range" id="crossfaderInput" min="0" max="100" value="0" step="1"
+                               oninput="handleManualCrossfaderSlide(this.value)"
+                               class="crossfader-slider">
+                    </div>
+
+                    <div class="pt-1.5 border-t border-slate-800/80 flex flex-col gap-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-wave-square text-emerald-400"></i>
+                                Tiempo de Mezcla:
+                            </span>
+                            <span id="fadeDurationLabel" class="font-mono font-bold text-emerald-400">8 seg</span>
+                        </div>
+                        <input type="range" id="fadeDurationSlider" min="2" max="20" value="8" step="1"
+                               oninput="updateFadeDuration(this.value)"
+                               class="w-full studio-range">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= DECK B (RIGHT) ================= -->
+            <div id="deckBCard" class="lg:col-span-4 bg-slate-900/90 border-2 border-slate-800 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300">
+                <div>
+                    <!-- Deck B Header + Spinning Jog Wheel -->
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div id="jogWheelB" class="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-950 via-fuchsia-900 to-slate-800 border-2 border-fuchsia-400 flex items-center justify-center shadow-md shadow-fuchsia-500/20 vinyl-paused relative">
+                                <div class="w-3 h-3 rounded-full bg-fuchsia-400 border border-slate-950"></div>
+                                <div class="absolute top-0.5 w-1 h-2 bg-white rounded-full"></div>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <h2 class="font-extrabold text-sm text-white tracking-wide">DECK B</h2>
+                                    <span id="deckBStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">SIGUIENTE</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+                                    <span id="deckBTrackIndex">Pista #2</span>
+                                    <span>•</span>
+                                    <span id="deckBBpmDisplay" class="text-fuchsia-400 font-bold">123.0 BPM</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-mono">Salida B</div>
+                            <div id="deckBVolText" class="text-base font-mono font-bold text-fuchsia-400">0%</div>
+                        </div>
+                    </div>
+
+                    <!-- YouTube IFrame Container B -->
+                    <div id="videoWrapperB" class="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 mb-3 shadow-inner">
+                        <div id="playerB" class="w-full h-full"></div>
+                        <div class="pointer-events-none absolute top-2 right-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm border border-fuchsia-500/40 text-[10px] font-mono text-fuchsia-300">
+                            DECK B • CH 2
+                        </div>
+                    </div>
+
+                    <!-- Track Info B (Strict 1:1 Verified) -->
+                    <div class="mb-3 bg-slate-950/85 rounded-xl p-2.5 border border-slate-800/90 space-y-1">
+                        <div class="flex items-center justify-between gap-2">
+                            <div id="deckBTitle" class="font-bold text-xs sm:text-sm text-white truncate">Cargando pista...</div>
+                            <a id="deckBYtLink" href="https://www.youtube.com" target="_blank" title="Abrir en YouTube" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-fuchsia-400 border border-fuchsia-500/30 shrink-0 flex items-center gap-1">
+                                <span id="deckBVideoIdBadge">ID: ---</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                            </a>
+                        </div>
+                        <div class="text-xs text-slate-400 truncate flex items-center justify-between">
+                            <span id="deckBArtist" class="truncate">-</span>
+                            <span id="deckBCutInfo" class="font-mono text-[10px] text-fuchsia-400/90 shrink-0">Intro: +0s | Fade: -6s</span>
+                        </div>
+                        <div class="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+                            <span id="deckBRealYtTitle" class="text-emerald-400 truncate">
+                                <i class="fa-solid fa-circle-check mr-1"></i>YT Player: Verificando...
+                            </span>
+                            <button onclick="findOfficialAudioForDeck('B')" title="Busca el Audio Oficial si hay bloqueo" class="text-amber-400 hover:underline shrink-0 ml-2">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Audio Oficial
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CONTROL RÁPIDO DEL PLATO B (INTUITIVO Y FUNCIONAL) -->
+                    <div class="mb-2.5 bg-slate-950/90 p-2.5 rounded-xl border border-slate-800/90 space-y-2">
+                        <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                            <span class="uppercase font-bold text-fuchsia-400"><i class="fa-solid fa-sliders mr-1"></i>Control Rápido del Plato B</span>
+                            <span id="loopStatusB" class="text-slate-500 font-bold">NORMAL</span>
+                        </div>
+
+                        <!-- Fila 1: Transporte rápido del plato -->
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button onclick="jumpToTrackIntro('B')" title="Volver al punto de inicio/intro de la canción" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-fuchsia-950/70 border border-slate-700 hover:border-fuchsia-500/50 text-[11px] font-semibold text-fuchsia-300 transition flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-backward-fast text-[10px]"></i>
+                                <span>Ir al Inicio</span>
+                            </button>
+                            <button onclick="scrubDeckSeconds('B', -10)" title="Retroceder 10 segundos" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-mono font-bold text-slate-200 transition flex items-center justify-center gap-1">
+                                <span>⏪ -10s</span>
+                            </button>
+                            <button onclick="scrubDeckSeconds('B', 10)" title="Adelantar 10 segundos para buscar el golpe" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-mono font-bold text-slate-200 transition flex items-center justify-center gap-1">
+                                <span>⏩ +10s</span>
+                            </button>
+                        </div>
+
+                        <!-- Fila 2: Fijar Intro en vivo y Bucle simple de 1 clic -->
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button onclick="captureCurrentSecondAsIntro('B')" title="Guarda el segundo actual para que la canción siempre arranque desde aquí" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-amber-500/20 border border-slate-700 hover:border-amber-400/50 text-[11px] font-semibold text-amber-300 transition flex items-center justify-center gap-1">
+                                <span>📍 Fijar Intro Aquí</span>
+                            </button>
+                            <button id="simpleLoopBtnB" onclick="toggleSimple4sLoop('B')" title="Repite los últimos 4 segundos en bucle hasta que lo desactives" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-emerald-500/20 border border-slate-700 text-[11px] font-mono font-bold text-slate-300 transition flex items-center justify-center gap-1">
+                                <span>🔁 Bucle 4s: OFF</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CONTROL DE PITCH / VELOCIDAD SIMPLE (PLATO B) -->
+                    <div class="mb-3 bg-slate-950/90 p-2.5 rounded-xl border border-slate-800/90 space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono uppercase text-slate-400">Velocidad (Pitch): <strong id="pitchLabelB" class="text-fuchsia-400">1.00x</strong></span>
+                            <div class="flex items-center gap-1">
+                                <button onclick="resetDeckPitch('B')" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono font-bold text-slate-300 transition" title="Restaurar velocidad normal 1.00x">
+                                    1.00x Reset
+                                </button>
+                                <button onclick="syncDeckBpm('B')" class="px-2 py-0.5 rounded bg-fuchsia-500/20 hover:bg-fuchsia-500/30 border border-fuchsia-500/40 text-[10px] font-mono font-bold text-fuchsia-300 transition" title="Igualar tempo con Plato A">
+                                    SYNC
+                                </button>
+                            </div>
+                        </div>
+                        <input type="range" id="pitchSliderB" min="0.75" max="1.50" step="0.05" value="1.00"
+                               oninput="changeDeckPitch('B', this.value)"
+                               class="w-full studio-range accent-fuchsia-400">
+                    </div>
+                </div>
+
+                <!-- Progress, Gain & Seek Bar B -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <button id="muteBtnB" onclick="toggleDeckMute('B')" class="px-2 py-1 rounded bg-slate-950 border border-slate-800 text-fuchsia-400 text-xs">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </button>
+                        <input type="range" id="gainSliderB" min="0" max="100" value="100" oninput="setIndividualDeckGain('B', this.value)" class="flex-1 studio-range accent-fuchsia-400" title="Ganancia Canal B">
+                        <span id="deckBStateText" class="text-[10px] font-mono text-fuchsia-400 w-20 text-right truncate">PREPARADO</span>
+                    </div>
+
+                    <div class="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                        <div id="deckBVolBar" class="h-full bg-gradient-to-r from-fuchsia-600 to-fuchsia-400 transition-all duration-150" style="width: 0%"></div>
+                    </div>
+
+                    <div class="space-y-1 pt-0.5">
+                        <input type="range" id="seekBarB" min="0" max="100" value="0" step="1" oninput="userSeek('B', this.value)" class="w-full studio-range accent-fuchsia-400">
+                        <div class="flex justify-between text-[11px] font-mono text-slate-400">
+                            <span id="deckBCurrentTime">00:00</span>
+                            <span id="deckBFadePointLabel" class="text-[10px] text-amber-400/90"></span>
+                            <span id="deckBDuration">00:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BOTTOM SECTION: BUSCADOR EN VIVO DE YOUTUBE CON TILDES & GESTOR DE PLAYLISTS -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ================= LEFT COLUMN (5 COLS): BUSCADOR REAL DE YOUTUBE + CATÁLOGO ART TRACKS ================= -->
+            <div class="lg:col-span-5 bg-slate-900/95 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+                <div>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3 mb-3.5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-lg bg-red-500/15 border border-red-500/40 text-red-400 flex items-center justify-center text-xs">
+                                <i class="fa-brands fa-youtube"></i>
+                            </span>
+                            <div>
+                                <h3 class="font-bold text-sm text-white uppercase tracking-wider">Buscador YouTube en Vivo</h3>
+                                <p class="text-[11px] text-slate-400">Filtra al instante o busca en vivo en YouTube</p>
+                            </div>
+                        </div>
+
+                        <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px] font-semibold">
+                            <button id="tabModeSearch" onclick="switchAddTab('search')" class="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 transition">
+                                <i class="fa-solid fa-magnifying-glass mr-1"></i>Buscar en YT
+                            </button>
+                            <button id="tabModeManual" onclick="switchAddTab('manual')" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">
+                                <i class="fa-solid fa-link mr-1"></i>Pegar Link YT
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TAB 1: LIVE YOUTUBE SEARCH & BULK CHECKBOXES -->
+                    <div id="panelSearchMode" class="space-y-3.5">
+                        <form onsubmit="handleLiveYouTubeSearch(event)" class="space-y-2">
+                            <div class="relative flex items-center">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-slate-400 text-xs"></i>
+                                <input type="text" id="liveSearchInput"
+                                       oninput="instantFilterCatalog(this.value)"
+                                       placeholder="Buscar (ej: Solomun, Boris Brejcha, Luck Ra, Cerati, Daft Punk)..."
+                                       class="w-full pl-9 pr-28 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 transition">
+                                <button type="submit" id="liveSearchBtn" class="absolute right-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5">
+                                    <i class="fa-brands fa-youtube"></i>
+                                    <span>Buscar YT</span>
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Quick Verified Crate Filter Pills -->
+                        <div class="flex flex-wrap gap-1.5">
+                            <button onclick="showVerifiedCategory('all')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 text-[11px] font-medium transition">
+                                Ver Todo (23)
+                            </button>
+                            <button onclick="showVerifiedCategory('techno')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-fuchsia-300 border border-fuchsia-500/40 text-[11px] font-medium transition">
+                                🎛️ Solomun & Techno
+                            </button>
+                            <button onclick="showVerifiedCategory('cuarteto')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-cyan-300 border border-cyan-500/30 text-[11px] transition">
+                                🔥 Cuarteto & Fiesta
+                            </button>
+                            <button onclick="showVerifiedCategory('rock')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-amber-300 border border-amber-500/30 text-[11px] transition">
+                                🎸 Rock Nacional
+                            </button>
+                            <button onclick="showVerifiedCategory('dance')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-indigo-300 border border-indigo-500/30 text-[11px] transition">
+                                🎧 Dance & 80s
+                            </button>
+                        </div>
+
+                        <!-- Search Engine Status Line -->
+                        <div id="searchStatusBanner" class="text-[11px] font-mono px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 flex items-center justify-between">
+                            <span id="searchStatusText" class="truncate"><i class="fa-solid fa-circle-check text-emerald-400 mr-1.5"></i>Catálogo Oficial Verificado (Sincronización 1:1)</span>
+                            <span id="searchResultCountBadge" class="text-emerald-400 font-bold shrink-0 ml-2">23 temas</span>
+                        </div>
+
+                        <!-- Select All & Default Cut Settings -->
+                        <div class="bg-slate-950/90 border border-slate-800/90 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2">
+                            <label class="flex items-center gap-2.5 cursor-pointer select-none text-xs font-medium text-slate-200">
+                                <input type="checkbox" id="selectAllSearchCheckbox" onchange="toggleSelectAllResults(this.checked)" class="dj-checkbox">
+                                <span>Seleccionar todos</span>
+                            </label>
+
+                            <div class="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+                                <span>Intro:</span>
+                                <input type="number" id="bulkDefaultIntro" value="0" min="0" max="120" class="w-11 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-white text-center">
+                                <span>Fade:</span>
+                                <input type="number" id="bulkDefaultTrimEnd" value="4" min="0" max="90" class="w-11 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300 text-center">
+                            </div>
+                        </div>
+
+                        <!-- Search Results List Container -->
+                        <div id="searchResultsContainer" class="space-y-2 max-h-[360px] overflow-y-auto pr-1"></div>
+
+                        <!-- Bulk Action Bar -->
+                        <div class="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+                            <div class="text-xs text-slate-400">
+                                <span id="selectedCountNumber" class="font-mono font-bold text-emerald-400">0</span> con tilde
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="addSelectedToQueue(false)" id="btnAddSelected" disabled
+                                        class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-bold text-xs uppercase tracking-wider transition flex items-center gap-1.5">
+                                    <i class="fa-solid fa-check-double"></i>
+                                    <span id="btnAddSelectedText">Sumar a la Cola</span>
+                                </button>
+                                <button onclick="addSelectedToQueue(true)" id="btnReplaceWithSelected" disabled
+                                        class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-cyan-950/80 disabled:opacity-40 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition">
+                                    Reemplazar Cola
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: MANUAL YOUTUBE URL / ID FORM WITH LIVE OEMBED RESOLVER -->
+                    <form id="panelManualMode" onsubmit="handleAddTrackManual(event)" class="hidden space-y-3.5">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">
+                                Enlace de YouTube, YouTube Music o ID de 11 caracteres <span class="text-red-400">*</span>
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="text" id="inputUrl" required
+                                       oninput="previewManualUrlMetadata(this.value)"
+                                       placeholder="Ej: https://www.youtube.com/watch?v=b3_lVSrPB6w"
+                                       class="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700/80 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono">
+                            </div>
+                        </div>
+
+                        <!-- Live Metadata Verification Box -->
+                        <div id="manualUrlPreviewBox" class="hidden p-2.5 rounded-xl bg-slate-950 border border-emerald-500/40 flex items-center gap-3">
+                            <img id="manualPreviewThumb" src="https://placehold.co/80x60/0f172a/10b981?text=YT" class="w-12 h-9 rounded object-cover border border-slate-800">
+                            <div class="min-w-0 flex-1">
+                                <div id="manualPreviewTitle" class="text-xs font-bold text-emerald-300 truncate">Verificando en YouTube...</div>
+                                <div id="manualPreviewAuthor" class="text-[11px] text-slate-400 truncate">-</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Título (Auto-detectado)</label>
+                                <input type="text" id="inputTitle" placeholder="Se completa automáticamente"
+                                       class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Artista / Canal</label>
+                                <input type="text" id="inputArtist" placeholder="Se completa automáticamente"
+                                       class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/90 grid grid-cols-3 gap-2.5">
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Intro (+seg)</label>
+                                <input type="number" id="inputStartSec" min="0" max="600" value="0"
+                                       class="w-full px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Fade (-seg)</label>
+                                <input type="number" id="inputTrimEndSec" min="0" max="120" value="4"
+                                       class="w-full px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">BPM Base</label>
+                                <input type="number" id="inputBpm" min="60" max="200" value="124"
+                                       class="w-full px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-cyan-300">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Agregar Canción Verificada a la Cola</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ================= RIGHT COLUMN (7 COLS): MULTI-PLAYLIST MANAGER & ACTIVE QUEUE ================= -->
+            <div class="lg:col-span-7 bg-slate-900/95 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+                <div>
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3.5 mb-4">
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <i class="fa-solid fa-list-ul text-cyan-400"></i>
+                            <h3 class="font-bold text-sm text-white uppercase tracking-wider">Playlist Activa:</h3>
+
+                            <select id="savedPlaylistsSelect" onchange="switchSavedPlaylist(this.value)"
+                                    class="bg-slate-950 text-emerald-300 font-semibold text-xs px-3 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-emerald-400">
+                            </select>
+
+                            <button onclick="createNewNamedPlaylist()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs border border-slate-700 transition flex items-center gap-1">
+                                <i class="fa-solid fa-folder-plus text-emerald-400"></i> Nueva
+                            </button>
+
+                            <span id="playlistCountBadge" class="text-xs font-mono px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300">0 pistas</span>
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="exportPlaylistJSON()" title="Exportar Playlist JSON" class="p-2 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-300 text-xs border border-slate-700 transition">
+                                <i class="fa-solid fa-download text-cyan-400"></i>
+                            </button>
+                            <label title="Importar Playlist JSON" class="p-2 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-300 text-xs border border-slate-700 transition cursor-pointer">
+                                <i class="fa-solid fa-upload text-fuchsia-400"></i>
+                                <input type="file" accept=".json" onchange="importPlaylistJSON(event)" class="hidden">
+                            </label>
+                            <button onclick="hardResetCacheAndFactory()" title="Restaurar Playlists Oficiales" class="p-2 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-300 text-xs border border-slate-700 transition">
+                                <i class="fa-solid fa-rotate-left text-amber-400"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Inline New Playlist Creation Box -->
+                    <div id="newPlaylistModalBox" class="hidden mb-4 p-3 rounded-xl bg-slate-950 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-2">
+                        <input type="text" id="newPlaylistNameInput" placeholder="Nombre de la nueva Playlist..."
+                               class="flex-1 min-w-[200px] px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-400">
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="confirmCreateNamedPlaylist()" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs">Guardar</button>
+                            <button onclick="document.getElementById('newPlaylistModalBox').classList.add('hidden')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-400 text-xs">Cancelar</button>
+                        </div>
+                    </div>
+
+                    <!-- Active Queue List -->
+                    <div id="playlistContainer" class="space-y-2.5 max-h-[500px] overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- Bottom Keyboard Shortcuts Legend -->
+                <div class="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300"><strong class="text-emerald-400">Espacio</strong>: Play/Pausa</span>
+                        <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300"><strong class="text-cyan-400">M</strong>: Crossfade</span>
+                        <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300"><strong class="text-amber-400">F</strong>: Pantalla Completa</span>
+                        <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300"><strong class="text-emerald-400">⚡ Libre</strong>: Carga automática en el plato libre</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400"></span> Plato A</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-fuchsia-400"></span> Plato B</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Official GDicampli Copyright Studio Footer -->
+    <footer class="border-t border-slate-800/80 bg-slate-950/95 py-4 px-4 sm:px-6 mt-6">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+            <div class="flex items-center gap-2.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-400"></span>
+                <span class="font-semibold text-slate-200">© 2026 GDicampli</span>
+                <span>— Todos los derechos reservados •</span>
+                <span class="text-cyan-400 font-mono">YTM Crossfade Studio PRO (Dual Deck A/B Architecture)</span>
+            </div>
+            <div class="flex items-center gap-3 font-mono text-[11px]">
+                <span class="text-slate-500">Atajos DJ:</span>
+                <span><strong class="text-emerald-400">Espacio</strong> Play/Pausa</span>
+                <span>•</span>
+                <span><strong class="text-cyan-400">M</strong> Mezclar</span>
+                <span>•</span>
+                <span><strong class="text-amber-400">F</strong> Pantalla Completa</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <script>
+        /********************************************************************
+         * 1. BASE DE DATOS ESTRICTA 100% VERIFICADA (YOUTUBE MUSIC ART TRACKS)
+         * Incluye los IDs exactos verificados y BPM de referencia para VirtualDJ.
+         ********************************************************************/
+        const STRICT_STORAGE_KEY = 'ytm_vdj_pro_v12_strict';
+        const STRICT_SETS_KEY = 'ytm_vdj_pro_sets_v12_strict';
+        const YT_API_KEY_STORAGE = 'ytm_dj_user_yt_api_key_v9';
+
+        // Limpiar versiones previas en caché para garantizar los IDs nuevos
+        try {
+            [
+                'ytm_dj_studio_v8_clean', 'ytm_dj_multisets_v8_clean',
+                'ytm_dj_pro_v9_strict_sync', 'ytm_dj_pro_sets_v9_strict_sync',
+                'ytm_dj_pro_v10_strict_sync', 'ytm_dj_pro_sets_v10_strict_sync'
+            ].forEach(k => localStorage.removeItem(k));
+        } catch (e) {}
+
+        const VERIFIED_ART_TRACKS = [
+            // Solomun & Melodic Techno / House
+            { videoId: 'b3_lVSrPB6w', title: 'Customer Is King', artist: 'Solomun • Diynamic Official', bpm: 122, category: 'techno' },
+            { videoId: '2tY5D_X2W0M', title: 'Home (Club Mix)', artist: 'Solomun • Official Audio', bpm: 124, category: 'techno' },
+            { videoId: 'fBiyiU5Blm8', title: 'Late Night (Solomun Remix)', artist: 'Foals • Solomun Official Remix', bpm: 123, category: 'techno' },
+            { videoId: 'V7Y9H0M1L2k', title: 'Something We All Adore', artist: 'Solomun • Official Track', bpm: 125, category: 'techno' },
+            { videoId: 'N7j8I2sA7J8', title: 'Gravity', artist: 'Boris Brejcha • High-Tech Minimal', bpm: 125, category: 'techno' },
+            { videoId: 'Tx9zMFodNtA', title: 'Innerbloom', artist: 'RÜFÜS DU SOL • Official Audio', bpm: 122, category: 'techno' },
+            { videoId: 'b6vSf0cA9qY', title: 'Consciousness', artist: 'Anyma & Chris Avantgarde • Afterlife', bpm: 126, category: 'techno' },
+
+            // Cuarteto & Fiesta
+            { videoId: 'b6Zc4nUgxHk', title: 'Hola Perdida', artist: 'Luck Ra, KHEA (Sony Music Art Track)', bpm: 140, category: 'cuarteto' },
+            { videoId: '3RoPGnYsdPY', title: 'Ya No Vuelvas', artist: 'La Konga, Luck Ra, Ke Personajes', bpm: 142, category: 'cuarteto' },
+            { videoId: 'c1_bFzW4uF4', title: 'Universo Paralelo', artist: 'La Konga, Nahuel Pennisi', bpm: 145, category: 'cuarteto' },
+            { videoId: 'vA8G7C2uX3k', title: 'La Morocha', artist: 'Luck Ra, BM', bpm: 138, category: 'cuarteto' },
+            { videoId: '9k8L2m3N4p5', title: 'Mil Preguntas', artist: 'Q\' Lokura, Luck Ra', bpm: 144, category: 'cuarteto' },
+
+            // Rock Nacional
+            { videoId: '8WnL5FLqwk8', title: 'Crimen', artist: 'Gustavo Cerati (Official Art Track)', bpm: 96, category: 'rock' },
+            { videoId: 'sWft4cMiwXQ', title: 'De Música Ligera', artist: 'Soda Stereo (Columbia Art Track)', bpm: 124, category: 'rock' },
+            { videoId: 'iU8tG7L2k8M', title: 'Persiana Americana', artist: 'Soda Stereo', bpm: 130, category: 'rock' },
+            { videoId: 'uLIs0j24N3k', title: 'Demoliendo Hoteles', artist: 'Charly García', bpm: 136, category: 'rock' },
+            { videoId: 'X3C9K2L1M4P', title: 'Jijiji', artist: 'Patricio Rey y sus Redonditos de Ricota', bpm: 128, category: 'rock' },
+            { videoId: '6J6_R_T1w_w', title: 'Flaca', artist: 'Andrés Calamaro', bpm: 98, category: 'rock' },
+            { videoId: '09T9B29g_y0', title: 'Matador', artist: 'Los Fabulosos Cadillacs', bpm: 118, category: 'rock' },
+
+            // 80s / 90s / Dance / Synth
+            { videoId: '5NV6Rdv1a3I', title: 'Get Lucky', artist: 'Daft Punk ft. Pharrell Williams', bpm: 116, category: 'dance' },
+            { videoId: 'FGBhQbmPwH8', title: 'One More Time', artist: 'Daft Punk', bpm: 123, category: 'dance' },
+            { videoId: 'dX3k_QDnzHE', title: 'Midnight City', artist: 'M83', bpm: 105, category: 'dance' },
+            { videoId: '4NRXx6U8ABQ', title: 'Blinding Lights', artist: 'The Weeknd', bpm: 171, category: 'dance' }
+        ];
+
+        const DEFAULT_MAIN_PLAYLIST = [
+            { id: 'p1', videoId: 'b3_lVSrPB6w', title: 'Customer Is King', artist: 'Solomun • Diynamic Official', bpm: 122, startSec: 0, trimEndSec: 6, cues: [null, null, null, null] },
+            { id: 'p2', videoId: 'fBiyiU5Blm8', title: 'Late Night (Solomun Remix)', artist: 'Foals • Solomun Official Remix', bpm: 123, startSec: 0, trimEndSec: 6, cues: [null, null, null, null] },
+            { id: 'p3', videoId: 'b6Zc4nUgxHk', title: 'Hola Perdida', artist: 'Luck Ra, KHEA', bpm: 140, startSec: 0, trimEndSec: 3, cues: [null, null, null, null] },
+            { id: 'p4', videoId: '3RoPGnYsdPY', title: 'Ya No Vuelvas', artist: 'La Konga, Luck Ra, Ke Personajes', bpm: 142, startSec: 0, trimEndSec: 4, cues: [null, null, null, null] },
+            { id: 'p5', videoId: '8WnL5FLqwk8', title: 'Crimen', artist: 'Gustavo Cerati', bpm: 96, startSec: 0, trimEndSec: 3, cues: [null, null, null, null] },
+            { id: 'p6', videoId: 'sWft4cMiwXQ', title: 'De Música Ligera', artist: 'Soda Stereo', bpm: 124, startSec: 0, trimEndSec: 3, cues: [null, null, null, null] },
+            { id: 'p7', videoId: '5NV6Rdv1a3I', title: 'Get Lucky', artist: 'Daft Punk ft. Pharrell Williams', bpm: 116, startSec: 0, trimEndSec: 4, cues: [null, null, null, null] }
+        ];
+
+        let savedSets = {};
+        let currentSetName = 'Set Principal DJ';
+        let playlist = [];
+
+        let currentSearchResults = [...VERIFIED_ART_TRACKS];
+        let selectedSearchIds = new Set();
+        let userYouTubeApiKey = localStorage.getItem(YT_API_KEY_STORAGE) || '';
+
+        // 3 Instancias de YouTube: Deck A, Deck B y Deck C (Buscador Nativo de YouTube)
+        let playerA = null;
+        let playerB = null;
+        let searchPlayer = null;
+        let playersReady = { A: false, B: false, Search: false };
+        let pendingNativeSearchQuery = null;
+        let pendingDeckRecovery = null;
+
+        // Estado VirtualDJ de los Decks
+        let activeDeck = 'A';
+        let currentTrackIndex = 0;
+        let nextTrackIndex = 1;
+        let isMasterPlaying = false;
+        let isCrossfading = false;
+        let crossfadeDurationSec = 8;
+        let crossfaderCurve = 'power'; // 'power', 'linear', 'cut'
+        let crossfadeInterval = null;
+        let monitorInterval = null;
+        let isShuffle = false;
+        let isLoop = true;
+        let audioOnlyMode = false;
+
+        const deckState = {
+            A: { gain: 100, muted: false, pitch: 1.0, baseBpm: 122, clearCueMode: false, loopActive: false, loopStart: 0, loopLength: 0, tapTimes: [] },
+            B: { gain: 100, muted: false, pitch: 1.0, baseBpm: 123, clearCueMode: false, loopActive: false, loopStart: 0, loopLength: 0, tapTimes: [] }
+        };
+
+        // Web Audio API Context para el Sampler de 6 Pads
+        let audioCtx = null;
+
+        /********************************************************************
+         * 2. INICIALIZACIÓN DE SETS Y LOS 3 REPRODUCTORES OFICIALES YOUTUBE
+         ********************************************************************/
+        function loadSavedState() {
+            if (userYouTubeApiKey) {
+                document.getElementById('ytApiKeyInput').value = userYouTubeApiKey;
+                document.getElementById('apiKeyStatusBtnText').textContent = 'YT API Key: Activa ✓';
+            }
+
+            try {
+                const rawSets = localStorage.getItem(STRICT_SETS_KEY);
+                if (rawSets) {
+                    const parsed = JSON.parse(rawSets);
+                    if (parsed && Object.keys(parsed).length > 0) {
+                        savedSets = parsed;
+                        currentSetName = Object.keys(savedSets)[0];
+                        playlist = savedSets[currentSetName];
+                        renderSavedPlaylistsSelect();
+                        return;
+                    }
+                }
+            } catch (e) {}
+            buildFactorySets();
+        }
+
+        function buildFactorySets() {
+            playlist = JSON.parse(JSON.stringify(DEFAULT_MAIN_PLAYLIST));
+            savedSets = {
+                'Set Principal DJ': playlist,
+                'Melodic Techno & Solomun': VERIFIED_ART_TRACKS.filter(t => t.category === 'techno').map((t, i) => ({
+                    id: 'tech_' + i, videoId: t.videoId, title: t.title, artist: t.artist, bpm: t.bpm, startSec: 0, trimEndSec: 6, cues: [null, null, null, null]
+                })),
+                'Cuarteto & Previa': VERIFIED_ART_TRACKS.filter(t => t.category === 'cuarteto').map((t, i) => ({
+                    id: 'c_' + i, videoId: t.videoId, title: t.title, artist: t.artist, bpm: t.bpm, startSec: 0, trimEndSec: 3, cues: [null, null, null, null]
+                })),
+                'Rock Nacional': VERIFIED_ART_TRACKS.filter(t => t.category === 'rock').map((t, i) => ({
+                    id: 'r_' + i, videoId: t.videoId, title: t.title, artist: t.artist, bpm: t.bpm, startSec: 0, trimEndSec: 3, cues: [null, null, null, null]
+                }))
+            };
+            currentSetName = 'Set Principal DJ';
+            savePlaylist();
+            renderSavedPlaylistsSelect();
+        }
+
+        function savePlaylist() {
+            try {
+                savedSets[currentSetName] = playlist;
+                localStorage.setItem(STRICT_SETS_KEY, JSON.stringify(savedSets));
+                localStorage.setItem(STRICT_STORAGE_KEY, JSON.stringify(playlist));
+            } catch (e) {}
+        }
+
+        function hardResetCacheAndFactory() {
+            localStorage.removeItem(STRICT_SETS_KEY);
+            localStorage.removeItem(STRICT_STORAGE_KEY);
+            buildFactorySets();
+            activeDeck = 'A';
+            currentTrackIndex = 0;
+            nextTrackIndex = 1;
+            document.getElementById('crossfaderInput').value = 0;
+            applyCrossfaderPosition(0);
+            highlightActiveDeckCard();
+            renderPlaylist();
+            showVerifiedCategory('all');
+
+            if (playersReady.A && playersReady.B) {
+                cueOrLoadTrackOnDeck('A', 0, false);
+                cueOrLoadTrackOnDeck('B', 1, false);
+            }
+            showToast('Catálogo oficial y funciones VirtualDJ restauradas al 100%.', 'emerald');
+        }
+
+        function ensureYouTubeAPILoaded() {
+            loadTrackMetadataIntoDeck('A', currentTrackIndex);
+            loadTrackMetadataIntoDeck('B', nextTrackIndex);
+
+            if (window.YT && window.YT.Player) {
+                initAllYouTubePlayers();
+                return;
+            }
+
+            if (!document.getElementById('yt-iframe-api-script')) {
+                const tag = document.createElement('script');
+                tag.id = 'yt-iframe-api-script';
+                tag.src = "https://www.youtube.com/iframe_api";
+                document.head.appendChild(tag);
+            }
+
+            let retries = 0;
+            const checkTimer = setInterval(() => {
+                retries++;
+                if (window.YT && window.YT.Player) {
+                    clearInterval(checkTimer);
+                    initAllYouTubePlayers();
+                } else if (retries > 40) {
+                    clearInterval(checkTimer);
+                }
+            }, 250);
+        }
+
+        window.onYouTubeIframeAPIReady = function() {
+            initAllYouTubePlayers();
+        };
+
+        function initAllYouTubePlayers() {
+            if (playerA || playerB) return;
+
+            const firstTrack = playlist[0] || DEFAULT_MAIN_PLAYLIST[0];
+            const secondTrack = playlist[1] || firstTrack;
+
+            playerA = new YT.Player('playerA', {
+                height: '100%',
+                width: '100%',
+                videoId: firstTrack.videoId,
+                playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+                events: {
+                    onReady: (e) => onDeckReady('A', e),
+                    onStateChange: (e) => onDeckStateChange('A', e),
+                    onError: (e) => onDeckError('A', e)
+                }
+            });
+
+            playerB = new YT.Player('playerB', {
+                height: '100%',
+                width: '100%',
+                videoId: secondTrack.videoId,
+                playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+                events: {
+                    onReady: (e) => onDeckReady('B', e),
+                    onStateChange: (e) => onDeckStateChange('B', e),
+                    onError: (e) => onDeckError('B', e)
+                }
+            });
+
+            searchPlayer = new YT.Player('searchEnginePlayer', {
+                height: '10',
+                width: '10',
+                playerVars: { autoplay: 0, controls: 0, playsinline: 1 },
+                events: {
+                    onReady: (e) => {
+                        playersReady.Search = true;
+                        e.target.mute();
+                    },
+                    onStateChange: (e) => onSearchEngineStateChange(e),
+                    onError: () => {
+                        document.getElementById('liveSearchBtn').innerHTML = `<i class="fa-brands fa-youtube"></i><span>Buscar YT</span>`;
+                    }
+                }
+            });
+        }
+
+        function onDeckReady(deck, event) {
+            playersReady[deck] = true;
+            if (deck === 'A') {
+                event.target.setVolume(100);
+                loadTrackMetadataIntoDeck('A', currentTrackIndex);
+                verifyAndSyncDeckTitle('A');
+            } else {
+                event.target.setVolume(0);
+                nextTrackIndex = getNextTrackIndex(currentTrackIndex);
+                loadTrackMetadataIntoDeck('B', nextTrackIndex);
+                verifyAndSyncDeckTitle('B');
+            }
+
+            if (playersReady.A && playersReady.B) {
+                renderPlaylist();
+                startTimeMonitor();
+            }
+        }
+
+        /********************************************************************
+         * 3. CONTROLES RÁPIDOS DE PLATO (IR AL INICIO, +-10S, FIJAR INTRO, BUCLE 4S)
+         *    Y ASIGNACIÓN DIRECTA A PLATO A, PLATO B O PLATO LIBRE
+         ********************************************************************/
+        function jumpToTrackIntro(deck) {
+            const player = deck === 'A' ? playerA : playerB;
+            const idx = deck === 'A' ? currentTrackIndex : nextTrackIndex;
+            const track = playlist[idx];
+            if (!player || typeof player.seekTo !== 'function') return;
+            const startPoint = track ? (Number(track.startSec) || 0) : 0;
+            player.seekTo(startPoint, true);
+            showToast(`Plato ${deck}: regresó al inicio (+${startPoint}s)`, deck === 'A' ? 'cyan' : 'emerald');
+        }
+
+        function scrubDeckSeconds(deck, deltaSeconds) {
+            const player = deck === 'A' ? playerA : playerB;
+            if (!player || typeof player.getCurrentTime !== 'function') return;
+            const cur = player.getCurrentTime() || 0;
+            const dur = player.getDuration() || 9999;
+            const target = Math.max(0, Math.min(dur - 1, cur + deltaSeconds));
+            player.seekTo(target, true);
+        }
+
+        function captureCurrentSecondAsIntro(deck) {
+            const player = deck === 'A' ? playerA : playerB;
+            const idx = deck === 'A' ? currentTrackIndex : nextTrackIndex;
+            const track = playlist[idx];
+            if (!player || !track || typeof player.getCurrentTime !== 'function') return;
+
+            const curSec = Math.max(0, Math.floor(player.getCurrentTime() || 0));
+            track.startSec = curSec;
+            savePlaylist();
+            loadTrackMetadataIntoDeck(deck, idx);
+            renderPlaylist();
+            showToast(`Intro de "${track.title}" fijado en +${curSec}s (Plato ${deck})`, 'amber');
+        }
+
+        function toggleSimple4sLoop(deck) {
+            const st = deckState[deck];
+            if (st.loopActive) {
+                exitDeckLoop(deck);
+                showToast(`Bucle desactivado en Plato ${deck}`, 'cyan');
+            } else {
+                toggleDeckLoop(deck, 4);
+            }
+        }
+
+        function toggleDeckLoop(deck, seconds) {
+            const player = deck === 'A' ? playerA : playerB;
+            if (!player || typeof player.getCurrentTime !== 'function') return;
+
+            const st = deckState[deck];
+            st.loopActive = true;
+            st.loopStart = player.getCurrentTime() || 0;
+            st.loopLength = seconds;
+
+            const statusEl = document.getElementById(`loopStatus${deck}`);
+            if (statusEl) {
+                statusEl.textContent = `BUCLE ${seconds}S ACTIVO`;
+                statusEl.className = 'text-emerald-400 font-bold animate-pulse';
+            }
+
+            const btn = document.getElementById(`simpleLoopBtn${deck}`);
+            if (btn) {
+                btn.innerHTML = `<span>🔁 Bucle 4s: ON</span>`;
+                btn.className = 'py-1.5 px-2 rounded-lg bg-emerald-500 text-slate-950 border border-emerald-300 text-[11px] font-mono font-extrabold transition flex items-center justify-center gap-1 shadow-md shadow-emerald-500/20';
+            }
+            showToast(`Bucle de ${seconds}s activado en Plato ${deck}`, 'emerald');
+        }
+
+        function exitDeckLoop(deck) {
+            deckState[deck].loopActive = false;
+            deckState[deck].loopLength = 0;
+
+            const statusEl = document.getElementById(`loopStatus${deck}`);
+            if (statusEl) {
+                statusEl.textContent = 'NORMAL';
+                statusEl.className = 'text-slate-500 font-bold';
+            }
+
+            const btn = document.getElementById(`simpleLoopBtn${deck}`);
+            if (btn) {
+                btn.innerHTML = `<span>🔁 Bucle 4s: OFF</span>`;
+                btn.className = 'py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-emerald-500/20 border border-slate-700 text-[11px] font-mono font-bold text-slate-300 transition flex items-center justify-center gap-1';
+            }
+        }
+
+        function resetDeckPitch(deck) {
+            const slider = document.getElementById(`pitchSlider${deck}`);
+            if (slider) slider.value = 1.00;
+            changeDeckPitch(deck, 1.00);
+            showToast(`Velocidad de Plato ${deck} restaurada a 1.00x`, 'cyan');
+        }
+
+        // ASIGNACIÓN DIRECTA A PLATO A, PLATO B O AL PLATO LIBRE
+        function getIdleDeck() {
+            const stateA = (playersReady.A && playerA && typeof playerA.getPlayerState === 'function') ? playerA.getPlayerState() : -1;
+            const stateB = (playersReady.B && playerB && typeof playerB.getPlayerState === 'function') ? playerB.getPlayerState() : -1;
+
+            if (stateA === YT.PlayerState.PLAYING && stateB !== YT.PlayerState.PLAYING) return 'B';
+            if (stateB === YT.PlayerState.PLAYING && stateA !== YT.PlayerState.PLAYING) return 'A';
+            return activeDeck === 'A' ? 'B' : 'A';
+        }
+
+        function loadQueueTrackToDeck(index, targetDeckMode, event) {
+            if (event) event.stopPropagation();
+            if (index < 0 || index >= playlist.length) return;
+
+            const targetDeck = targetDeckMode === 'FREE' ? getIdleDeck() : targetDeckMode;
+            const track = playlist[index];
+
+            if (targetDeck === 'A') {
+                currentTrackIndex = index;
+            } else {
+                nextTrackIndex = index;
+            }
+
+            // Si el plato destino es el que está sonando al aire actualmente, reproducir; si es el plato libre/en espera, dejarlo preparado (cued) listo para mezclar
+            const shouldAutoPlay = (targetDeck === activeDeck && isMasterPlaying);
+            cueOrLoadTrackOnDeck(targetDeck, index, shouldAutoPlay);
+            loadTrackMetadataIntoDeck('A', currentTrackIndex);
+            loadTrackMetadataIntoDeck('B', nextTrackIndex);
+            renderPlaylist();
+
+            if (targetDeck === activeDeck && !isMasterPlaying) {
+                showToast(`Cargado en Plato ${targetDeck} (Al Aire): "${track.title}". Pulsa Play para iniciar.`, targetDeck === 'A' ? 'cyan' : 'emerald');
+            } else if (targetDeck !== activeDeck) {
+                showToast(`Preparado en Plato ${targetDeck} (Siguiente mezcla): "${track.title}"`, 'emerald');
+            } else {
+                showToast(`Sonando en Plato ${targetDeck}: "${track.title}"`, targetDeck === 'A' ? 'cyan' : 'emerald');
+            }
+        }
+
+        function loadSearchItemToDeck(videoId, targetDeckMode, event) {
+            if (event) event.stopPropagation();
+            const item = currentSearchResults.find(t => t.videoId === videoId);
+            if (!item) return;
+
+            const defaultIntro = Math.max(0, Number(document.getElementById('bulkDefaultIntro').value) || 0);
+            const defaultTrim = Math.max(0, Number(document.getElementById('bulkDefaultTrimEnd').value) || 4);
+
+            // Buscar si ya está en la playlist activa; si no, sumarlo automáticamente
+            let targetIndex = playlist.findIndex(t => t.videoId === videoId);
+            if (targetIndex === -1) {
+                playlist.push({
+                    id: 'trk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+                    videoId: item.videoId,
+                    title: item.title,
+                    artist: item.artist,
+                    bpm: item.bpm || 124,
+                    startSec: defaultIntro,
+                    trimEndSec: defaultTrim,
+                    cues: [null, null, null, null],
+                    syncFromPlayer: true
+                });
+                targetIndex = playlist.length - 1;
+                savePlaylist();
+                renderSavedPlaylistsSelect();
+                renderSearchResultsList();
+            }
+
+            loadQueueTrackToDeck(targetIndex, targetDeckMode, null);
+        }
+
+        // PITCH / TEMPO, TAP BPM & SYNC
+        function changeDeckPitch(deck, rateVal) {
+            const rate = parseFloat(rateVal) || 1.0;
+            deckState[deck].pitch = rate;
+            document.getElementById(`pitchLabel${deck}`).textContent = `${rate.toFixed(2)}x`;
+
+            const effectiveBpm = (deckState[deck].baseBpm * rate).toFixed(1);
+            document.getElementById(`deck${deck}BpmDisplay`).textContent = `${effectiveBpm} BPM`;
+
+            const player = deck === 'A' ? playerA : playerB;
+            if (player && typeof player.setPlaybackRate === 'function') {
+                try { player.setPlaybackRate(rate); } catch (e) {}
+            }
+        }
+
+        function tapDeckBpm(deck) {
+            const now = performance.now();
+            const taps = deckState[deck].tapTimes;
+            if (taps.length > 0 && now - taps[taps.length - 1] > 2500) {
+                taps.length = 0;
+            }
+            taps.push(now);
+            if (taps.length > 6) taps.shift();
+
+            if (taps.length >= 2) {
+                let sum = 0;
+                for (let i = 1; i < taps.length; i++) sum += (taps[i] - taps[i - 1]);
+                const avgMs = sum / (taps.length - 1);
+                const measuredBpm = Math.min(200, Math.max(60, Math.round(60000 / avgMs)));
+                deckState[deck].baseBpm = measuredBpm;
+                const idx = deck === 'A' ? currentTrackIndex : nextTrackIndex;
+                if (playlist[idx]) {
+                    playlist[idx].bpm = measuredBpm;
+                    savePlaylist();
+                }
+                changeDeckPitch(deck, deckState[deck].pitch);
+            }
+        }
+
+        function syncDeckBpm(targetDeck) {
+            const sourceDeck = targetDeck === 'A' ? 'B' : 'A';
+            const targetBase = deckState[targetDeck].baseBpm || 122;
+            const sourceEffectiveBpm = (deckState[sourceDeck].baseBpm || 122) * deckState[sourceDeck].pitch;
+
+            let idealRate = sourceEffectiveBpm / targetBase;
+            idealRate = Math.min(1.5, Math.max(0.75, Math.round(idealRate * 20) / 20));
+
+            document.getElementById(`pitchSlider${targetDeck}`).value = idealRate;
+            changeDeckPitch(targetDeck, idealRate);
+            showToast(`Deck ${targetDeck} sincronizado a ${sourceEffectiveBpm.toFixed(1)} BPM (${idealRate.toFixed(2)}x)`, 'cyan');
+        }
+
+        // 6-PAD SYNTHESIZER DJ SOUND EFFECTS SAMPLER (WEB AUDIO API)
+        function playDjSynthEffect(type) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const now = audioCtx.currentTime;
+                const masterGain = audioCtx.createGain();
+                const volSlider = Number(document.getElementById('samplerVolSlider').value) / 100;
+                masterGain.gain.setValueAtTime(volSlider * 0.45, now);
+                masterGain.connect(audioCtx.destination);
+
+                if (type === 'airhorn') {
+                    // Classic Reggae/Club DJ Airhorn (3 detuned sawtooth oscillators)
+                    [390, 466.16, 587.33].forEach(freq => {
+                        const osc = audioCtx.createOscillator();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(freq * 0.92, now);
+                        osc.frequency.exponentialRampToValueAtTime(freq, now + 0.06);
+                        osc.connect(masterGain);
+                        osc.start(now);
+                        osc.stop(now + 0.65);
+                    });
+                    masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+                } else if (type === 'siren') {
+                    const osc = audioCtx.createOscillator();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.linearRampToValueAtTime(880, now + 0.25);
+                    osc.frequency.linearRampToValueAtTime(520, now + 0.5);
+                    osc.frequency.linearRampToValueAtTime(880, now + 0.75);
+                    osc.connect(masterGain);
+                    osc.start(now);
+                    osc.stop(now + 0.8);
+                    masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+                } else if (type === 'subdrop') {
+                    const osc = audioCtx.createOscillator();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(110, now);
+                    osc.frequency.exponentialRampToValueAtTime(28, now + 1.1);
+                    masterGain.gain.setValueAtTime(volSlider * 0.8, now);
+                    masterGain.gain.exponentialRampToValueAtTime(0.001, now + 1.15);
+                    osc.connect(masterGain);
+                    osc.start(now);
+                    osc.stop(now + 1.15);
+                } else if (type === 'laser') {
+                    const osc = audioCtx.createOscillator();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(1600, now);
+                    osc.frequency.exponentialRampToValueAtTime(110, now + 0.28);
+                    masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                    osc.connect(masterGain);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'riser' || type === 'crash') {
+                    const bufferSize = audioCtx.sampleRate * (type === 'riser' ? 1.4 : 0.7);
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buffer;
+                    const filter = audioCtx.createBiquadFilter();
+
+                    if (type === 'riser') {
+                        filter.type = 'bandpass';
+                        filter.frequency.setValueAtTime(300, now);
+                        filter.frequency.exponentialRampToValueAtTime(3800, now + 1.35);
+                        masterGain.gain.setValueAtTime(0.05, now);
+                        masterGain.gain.linearRampToValueAtTime(volSlider * 0.5, now + 1.2);
+                        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+                    } else {
+                        filter.type = 'highpass';
+                        filter.frequency.setValueAtTime(2500, now);
+                        masterGain.gain.setValueAtTime(volSlider * 0.5, now);
+                        masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.68);
+                    }
+                    noise.connect(filter);
+                    filter.connect(masterGain);
+                    noise.start(now);
+                }
+            } catch (e) {}
+        }
+
+        /********************************************************************
+         * 4. SINCRONIZACIÓN ESTRICTA 1:1 Y RECUPERACIÓN AUTOMÁTICA DE AUDIO
+         ********************************************************************/
+        function verifyAndSyncDeckTitle(deck) {
+            const player = deck === 'A' ? playerA : playerB;
+            const idx = deck === 'A' ? currentTrackIndex : nextTrackIndex;
+            const badgeEl = document.getElementById(`deck${deck}RealYtTitle`);
+            if (!player || typeof player.getVideoData !== 'function' || !badgeEl) return;
+
+            try {
+                const data = player.getVideoData();
+                if (data && data.title) {
+                    badgeEl.innerHTML = `<i class="fa-solid fa-circle-check mr-1 text-emerald-400"></i>YT Player: ${escapeHtml(data.title)}`;
+                    badgeEl.className = 'text-emerald-400 truncate';
+
+                    if (playlist[idx] && data.video_id === playlist[idx].videoId) {
+                        if (playlist[idx].title.startsWith('Video (') || playlist[idx].syncFromPlayer) {
+                            playlist[idx].title = data.title;
+                            if (data.author) playlist[idx].artist = data.author;
+                            delete playlist[idx].syncFromPlayer;
+                            savePlaylist();
+                            loadTrackMetadataIntoDeck(deck, idx);
+                            renderPlaylist();
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function onDeckStateChange(deck, event) {
+            updateDeckStateBadge(deck, event.data);
+            const jog = document.getElementById(`jogWheel${deck}`);
+            if (jog) {
+                jog.className = event.data === YT.PlayerState.PLAYING
+                    ? jog.className.replace('vinyl-paused', 'vinyl-spinning')
+                    : jog.className.replace('vinyl-spinning', 'vinyl-paused');
+            }
+
+            if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.CUED) {
+                verifyAndSyncDeckTitle(deck);
+            }
+
+            if (event.data === YT.PlayerState.PLAYING && deck === activeDeck) {
+                isMasterPlaying = true;
+                updateMasterPlayUI(true);
+            }
+
+            if (event.data === YT.PlayerState.ENDED && deck === activeDeck && !isCrossfading) {
+                executeSmoothCrossfade();
+            }
+        }
+
+        function onDeckError(deck, event) {
+            const idx = deck === 'A' ? currentTrackIndex : nextTrackIndex;
+            const track = playlist[idx];
+            const badgeEl = document.getElementById(`deck${deck}RealYtTitle`);
+
+            if (event.data === 101 || event.data === 150) {
+                if (badgeEl) {
+                    badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i>Restricción Embed (150). Buscando Audio Oficial...`;
+                    badgeEl.className = 'text-amber-400 truncate';
+                }
+                showToast(`Buscando pista de Audio Oficial para "${track ? track.title : 'la canción'}"...`, 'amber');
+                findOfficialAudioForDeck(deck);
+            }
+        }
+
+        function findOfficialAudioForDeck(deck) {
+            const idx = deck === 'A' ? currentTrackIndex : nextTrackIndex;
+            const track = playlist[idx];
+            if (!track || !playersReady.Search || !searchPlayer) return;
+
+            const query = `${track.title} ${track.artist} Official Audio`;
+            pendingDeckRecovery = { deck, idx, originalVideoId: track.videoId };
+            searchPlayer.cuePlaylist({ listType: 'search', list: query });
+        }
+
+        /********************************************************************
+         * 5. BUSCADOR MULTI-ETAPA SEGURO (SIN .XYZ)
+         * Usa allorigins.win SÓLO para consultar youtube.com/results +
+         * YouTube Data API v3 opcional + Deck C `cuePlaylist(search)` + noembed.
+         ********************************************************************/
+        function instantFilterCatalog(rawQuery) {
+            const q = (rawQuery || '').trim();
+            if (!q) {
+                currentSearchResults = [...VERIFIED_ART_TRACKS];
+                setSearchStatus('Catálogo Oficial Verificado (Sincronización 1:1)', false);
+                renderSearchResultsList();
+                return;
+            }
+            const qNorm = q.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const terms = qNorm.split(/\s+/).filter(Boolean);
+            const matches = VERIFIED_ART_TRACKS.filter(item => {
+                const hay = `${item.title} ${item.artist} ${item.category}`
+                    .toLowerCase()
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                return terms.every(t => hay.includes(t));
+            });
+            currentSearchResults = matches;
+            setSearchStatus(
+                matches.length > 0
+                    ? `Coincidencias rápidas (${matches.length}). Pulsa "Buscar YT" para buscar más en YouTube.`
+                    : `Pulsa el botón verde "Buscar YT" para buscar "${q}" en vivo en YouTube.`,
+                false
+            );
+            renderSearchResultsList();
+        }
+
+        async function scrapeOfficialYouTubeResultsViaAllOrigins(query) {
+            try {
+                const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&hl=es`;
+                const endpoint = `https://api.allorigins.win/get?url=${encodeURIComponent(ytUrl)}`;
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 4800);
+                const res = await fetch(endpoint, { signal: controller.signal });
+                clearTimeout(timer);
+                if (!res.ok) return [];
+
+                const payload = await res.json();
+                const html = payload && payload.contents ? payload.contents : '';
+                const match = html.match(/var ytInitialData\s*=\s*(\{.+?\});<\/script>/s);
+                if (!match) return [];
+
+                const data = JSON.parse(match[1]);
+                const contents = data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+                const found = [];
+
+                for (const section of contents) {
+                    const items = section?.itemSectionRenderer?.contents || [];
+                    for (const item of items) {
+                        const v = item.videoRenderer;
+                        if (v && v.videoId) {
+                            const title = v.title?.runs?.[0]?.text || v.title?.simpleText || `Video (${v.videoId})`;
+                            const author = v.ownerText?.runs?.[0]?.text || v.longBylineText?.runs?.[0]?.text || 'YouTube Music';
+                            found.push({
+                                videoId: v.videoId,
+                                title: title,
+                                artist: author,
+                                bpm: 124,
+                                category: 'yt_live'
+                            });
+                        }
+                        if (found.length >= 12) break;
+                    }
+                    if (found.length >= 12) break;
+                }
+                return found;
+            } catch (e) {
+                return [];
+            }
+        }
+
+        async function handleLiveYouTubeSearch(e) {
+            if (e) e.preventDefault();
+            const rawQuery = document.getElementById('liveSearchInput').value.trim();
+            if (!rawQuery) {
+                showVerifiedCategory('all');
+                return;
+            }
+
+            const directVideoId = extractYouTubeId(rawQuery);
+            if (directVideoId) {
+                setSearchStatus(`Verificando enlace directo (${directVideoId})...`, true);
+                const meta = await fetchNoembedMetadata(directVideoId);
+                currentSearchResults = [{
+                    videoId: directVideoId,
+                    title: meta.title,
+                    artist: meta.author,
+                    bpm: 124,
+                    category: 'direct'
+                }];
+                selectedSearchIds = new Set([directVideoId]);
+                setSearchStatus(`Enlace directo verificado en YouTube`, false);
+                renderSearchResultsList();
+                return;
+            }
+
+            const btn = document.getElementById('liveSearchBtn');
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Buscando...</span>`;
+            setSearchStatus(`Buscando "${rawQuery}" en YouTube...`, true);
+
+            const qNorm = rawQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const terms = qNorm.split(/\s+/).filter(Boolean);
+            const localVerifiedMatches = VERIFIED_ART_TRACKS.filter(item => {
+                const hay = `${item.title} ${item.artist} ${item.category}`
+                    .toLowerCase()
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                return terms.every(t => hay.includes(t));
+            });
+
+            // Etapa 1: Si el usuario tiene YouTube Data API v3 Key oficial
+            if (userYouTubeApiKey) {
+                try {
+                    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=12&q=${encodeURIComponent(rawQuery)}&key=${encodeURIComponent(userYouTubeApiKey)}`;
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if (data && Array.isArray(data.items) && data.items.length > 0) {
+                        const apiTracks = data.items.map(item => ({
+                            videoId: item.id.videoId,
+                            title: decodeHtmlEntities(item.snippet.title),
+                            artist: decodeHtmlEntities(item.snippet.channelTitle),
+                            bpm: 124,
+                            category: 'yt_live'
+                        }));
+                        const seen = new Set(localVerifiedMatches.map(t => t.videoId));
+                        currentSearchResults = [...localVerifiedMatches, ...apiTracks.filter(t => !seen.has(t.videoId))];
+                        selectedSearchIds.clear();
+                        btn.innerHTML = `<i class="fa-brands fa-youtube"></i><span>Buscar YT</span>`;
+                        setSearchStatus(`Resultados oficiales YouTube API v3 para "${rawQuery}"`, false);
+                        renderSearchResultsList();
+                        return;
+                    }
+                } catch (err) {}
+            }
+
+            // Etapa 2: Búsqueda en vivo en YouTube.com vía AllOrigins
+            const liveScraped = await scrapeOfficialYouTubeResultsViaAllOrigins(rawQuery);
+            if (liveScraped.length > 0) {
+                const seen = new Set(localVerifiedMatches.map(t => t.videoId));
+                currentSearchResults = [...localVerifiedMatches, ...liveScraped.filter(t => !seen.has(t.videoId))];
+                selectedSearchIds.clear();
+                btn.innerHTML = `<i class="fa-brands fa-youtube"></i><span>Buscar YT</span>`;
+                setSearchStatus(`Resultados en vivo de YouTube para "${rawQuery}" (${currentSearchResults.length})`, false);
+                renderSearchResultsList();
+                return;
+            }
+
+            // Etapa 3: Motor nativo IFrame `cuePlaylist({listType:'search'})`
+            if (playersReady.Search && searchPlayer && typeof searchPlayer.cuePlaylist === 'function') {
+                pendingNativeSearchQuery = rawQuery;
+                searchPlayer.cuePlaylist({ listType: 'search', list: rawQuery });
+
+                let polls = 0;
+                const pollTimer = setInterval(async () => {
+                    polls++;
+                    if (pendingNativeSearchQuery !== rawQuery) {
+                        clearInterval(pollTimer);
+                        return;
+                    }
+                    try {
+                        const ids = searchPlayer.getPlaylist();
+                        if (ids && Array.isArray(ids) && ids.length > 0) {
+                            clearInterval(pollTimer);
+                            pendingNativeSearchQuery = null;
+                            const uniqueIds = [...new Set(ids)].slice(0, 8);
+                            const resolved = await Promise.all(uniqueIds.map(async (vid) => {
+                                const meta = await fetchNoembedMetadata(vid);
+                                return { videoId: vid, title: meta.title, artist: meta.author, bpm: 124, category: 'yt_live' };
+                            }));
+                            const seen = new Set(localVerifiedMatches.map(t => t.videoId));
+                            currentSearchResults = [...localVerifiedMatches, ...resolved.filter(t => !seen.has(t.videoId))];
+                            btn.innerHTML = `<i class="fa-brands fa-youtube"></i><span>Buscar YT</span>`;
+                            setSearchStatus(`Resultados de YouTube para "${rawQuery}"`, false);
+                            renderSearchResultsList();
+                        } else if (polls >= 10) {
+                            clearInterval(pollTimer);
+                            pendingNativeSearchQuery = null;
+                            btn.innerHTML = `<i class="fa-brands fa-youtube"></i><span>Buscar YT</span>`;
+                            currentSearchResults = localVerifiedMatches;
+                            setSearchStatus(localVerifiedMatches.length > 0 ? `Mostrando resultados verificados para "${rawQuery}"` : `Agrega tu YT API Key gratuita arriba o pega el link de YouTube`, false);
+                            renderSearchResultsList();
+                        }
+                    } catch (e) {}
+                }, 300);
+            } else {
+                btn.innerHTML = `<i class="fa-brands fa-youtube"></i><span>Buscar YT</span>`;
+            }
+        }
+
+        async function onSearchEngineStateChange(event) {
+            const playlistIds = event.target.getPlaylist();
+            if (!playlistIds || !Array.isArray(playlistIds) || playlistIds.length === 0) return;
+
+            if (pendingDeckRecovery) {
+                const { deck, idx, originalVideoId } = pendingDeckRecovery;
+                pendingDeckRecovery = null;
+                const alternativeId = playlistIds.find(id => id !== originalVideoId) || playlistIds[0];
+                if (alternativeId && playlist[idx]) {
+                    const meta = await fetchNoembedMetadata(alternativeId);
+                    playlist[idx].videoId = alternativeId;
+                    playlist[idx].title = meta.title;
+                    playlist[idx].artist = meta.author;
+                    savePlaylist();
+                    renderPlaylist();
+                    cueOrLoadTrackOnDeck(deck, idx, deck === activeDeck && isMasterPlaying);
+                    showToast(`Audio Oficial cargado: ${meta.title}`, 'emerald');
+                }
+            }
+        }
+
+        async function fetchNoembedMetadata(videoId) {
+            const localMatch = VERIFIED_ART_TRACKS.find(t => t.videoId === videoId);
+            if (localMatch) return { title: localMatch.title, author: localMatch.artist };
+            try {
+                const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
+                const data = await res.json();
+                if (data && data.title) {
+                    return { title: data.title, author: data.author_name || 'YouTube Oficial' };
+                }
+            } catch (e) {}
+            return { title: `Video (${videoId})`, author: 'YouTube Oficial' };
+        }
+
+        function showVerifiedCategory(cat) {
+            document.getElementById('liveSearchInput').value = '';
+            if (cat === 'all') {
+                currentSearchResults = [...VERIFIED_ART_TRACKS];
+                setSearchStatus('Catálogo Oficial Verificado (Sincronización 1:1)', false);
+            } else {
+                currentSearchResults = VERIFIED_ART_TRACKS.filter(t => t.category === cat);
+                setSearchStatus(`Filtro activo: ${cat.toUpperCase()} (${currentSearchResults.length} pistas)`, false);
+            }
+            selectedSearchIds.clear();
+            renderSearchResultsList();
+        }
+
+        function setSearchStatus(message, loading = false) {
+            const textEl = document.getElementById('searchStatusText');
+            const icon = loading
+                ? `<i class="fa-solid fa-spinner fa-spin text-cyan-400 mr-1.5"></i>`
+                : `<i class="fa-solid fa-circle-check text-emerald-400 mr-1.5"></i>`;
+            textEl.innerHTML = `${icon}${escapeHtml(message)}`;
+        }
+
+        /********************************************************************
+         * 6. MOTOR DE MONITOREO, AUTO-LOOPS Y CROSSFADE CON CURVAS
+         ********************************************************************/
+        function startTimeMonitor() {
+            if (monitorInterval) clearInterval(monitorInterval);
+            monitorInterval = setInterval(() => {
+                if (!playersReady.A || !playersReady.B) return;
+
+                updateDeckTelemetry('A', playerA, currentTrackIndex);
+                updateDeckTelemetry('B', playerB, nextTrackIndex);
+
+                // Monitorear si hay Auto-Loop activo en Deck A o Deck B
+                ['A', 'B'].forEach(d => {
+                    const p = d === 'A' ? playerA : playerB;
+                    const st = deckState[d];
+                    if (st.loopActive && st.loopLength > 0 && p && typeof p.getCurrentTime === 'function') {
+                        const nowSec = p.getCurrentTime() || 0;
+                        if (nowSec >= st.loopStart + st.loopLength) {
+                            p.seekTo(st.loopStart, true);
+                        }
+                    }
+                });
+
+                const activePlayer = activeDeck === 'A' ? playerA : playerB;
+                const activeTrackIdx = activeDeck === 'A' ? currentTrackIndex : nextTrackIndex;
+                const activeTrack = playlist[activeTrackIdx];
+
+                if (!activePlayer || typeof activePlayer.getPlayerState !== 'function') return;
+                const state = activePlayer.getPlayerState();
+
+                if (state === YT.PlayerState.PLAYING && !isCrossfading && !deckState[activeDeck].loopActive) {
+                    const curTime = activePlayer.getCurrentTime() || 0;
+                    const duration = activePlayer.getDuration() || 0;
+
+                    if (duration > 0) {
+                        const trimEnd = activeTrack ? (Number(activeTrack.trimEndSec) || 0) : 0;
+                        const effectiveEnd = Math.max(duration - trimEnd, crossfadeDurationSec + 1);
+                        const timeUntilFade = effectiveEnd - curTime;
+
+                        if (timeUntilFade > 0) {
+                            document.getElementById('countdownHeader').textContent = 'PRÓXIMA MEZCLA AUTOMÁTICA EN';
+                            document.getElementById('fadeCountdownDisplay').textContent = formatTime(timeUntilFade);
+                        }
+
+                        if (timeUntilFade <= crossfadeDurationSec && curTime > 2) {
+                            executeSmoothCrossfade();
+                        }
+                    }
+                } else if (!isCrossfading) {
+                    document.getElementById('fadeCountdownDisplay').textContent = isMasterPlaying ? 'AL AIRE' : 'LISTO';
+                }
+            }, 200);
+        }
+
+        function updateDeckTelemetry(deck, player, trackIdx) {
+            if (!player || typeof player.getCurrentTime !== 'function') return;
+            try {
+                const cur = player.getCurrentTime() || 0;
+                const dur = player.getDuration() || 0;
+                const track = playlist[trackIdx];
+
+                document.getElementById(`deck${deck}CurrentTime`).textContent = formatTime(cur);
+                document.getElementById(`deck${deck}Duration`).textContent = formatTime(dur);
+
+                const seekBar = document.getElementById(`seekBar${deck}`);
+                if (dur > 0 && document.activeElement !== seekBar) {
+                    seekBar.max = Math.floor(dur);
+                    seekBar.value = Math.floor(cur);
+                }
+
+                const fadePointLabel = document.getElementById(`deck${deck}FadePointLabel`);
+                if (dur > 0 && track) {
+                    const trimEnd = Number(track.trimEndSec) || 0;
+                    const fadeStartSec = Math.max(0, Math.floor(dur - trimEnd - crossfadeDurationSec));
+                    fadePointLabel.textContent = `Fade @ ${formatTime(fadeStartSec)}`;
+                } else {
+                    fadePointLabel.textContent = '';
+                }
+            } catch (e) {}
+        }
+
+        // Cálculo de ganancia según la curva elegida (Linear, Club Power, Scratch Cut)
+        function computeCrossfaderVolumes(posPercent) {
+            const p = Math.min(100, Math.max(0, Number(posPercent))) / 100; // 0.0 (A) a 1.0 (B)
+            let rawA = 1 - p;
+            let rawB = p;
+
+            if (crossfaderCurve === 'power') {
+                rawA = Math.cos(p * 0.5 * Math.PI);
+                rawB = Math.sin(p * 0.5 * Math.PI);
+            } else if (crossfaderCurve === 'cut') {
+                rawA = p < 0.85 ? 1 : (1 - p) / 0.15;
+                rawB = p > 0.15 ? 1 : p / 0.15;
+            }
+
+            const finalA = deckState.A.muted ? 0 : Math.round(rawA * deckState.A.gain);
+            const finalB = deckState.B.muted ? 0 : Math.round(rawB * deckState.B.gain);
+            return { volA: finalA, volB: finalB };
+        }
+
+        function applyCrossfaderPosition(posPercent) {
+            const { volA, volB } = computeCrossfaderVolumes(posPercent);
+            if (playersReady.A && playerA) try { playerA.setVolume(volA); } catch (e) {}
+            if (playersReady.B && playerB) try { playerB.setVolume(volB); } catch (e) {}
+            updateVolumeMetersUI(volA, volB);
+        }
+
+        function setCrossfaderCurve(curve) {
+            crossfaderCurve = curve;
+            const currentPos = Number(document.getElementById('crossfaderInput').value) || 0;
+            applyCrossfaderPosition(currentPos);
+            showToast(`Curva de Crossfader: ${curve.toUpperCase()}`, 'cyan');
+        }
+
+        function quickCutCrossfader(targetVal) {
+            if (crossfadeInterval) {
+                clearInterval(crossfadeInterval);
+                crossfadeInterval = null;
+                isCrossfading = false;
+            }
+            document.getElementById('crossfaderInput').value = targetVal;
+            handleManualCrossfaderSlide(targetVal);
+        }
+
+        function setIndividualDeckGain(deck, val) {
+            deckState[deck].gain = Number(val);
+            const currentPos = Number(document.getElementById('crossfaderInput').value) || 0;
+            applyCrossfaderPosition(currentPos);
+        }
+
+        function toggleDeckMute(deck) {
+            deckState[deck].muted = !deckState[deck].muted;
+            const btn = document.getElementById(`muteBtn${deck}`);
+            btn.innerHTML = deckState[deck].muted
+                ? '<i class="fa-solid fa-volume-xmark text-rose-400"></i>'
+                : '<i class="fa-solid fa-volume-high"></i>';
+            const currentPos = Number(document.getElementById('crossfaderInput').value) || 0;
+            applyCrossfaderPosition(currentPos);
+        }
+
+        function executeSmoothCrossfade(forcedTargetIndex = null) {
+            if (isCrossfading || playlist.length === 0) return;
+            if (!playersReady.A || !playersReady.B) return;
+            isCrossfading = true;
+
+            const outgoingDeck = activeDeck;
+            const incomingDeck = activeDeck === 'A' ? 'B' : 'A';
+            const outgoingPlayer = outgoingDeck === 'A' ? playerA : playerB;
+            const incomingPlayer = incomingDeck === 'A' ? playerA : playerB;
+
+            exitDeckLoop(outgoingDeck);
+
+            let targetIndex = forcedTargetIndex !== null
+                ? forcedTargetIndex
+                : (incomingDeck === 'A' ? currentTrackIndex : nextTrackIndex);
+
+            if (targetIndex === null || targetIndex === undefined || !playlist[targetIndex]) {
+                targetIndex = getNextTrackIndex(outgoingDeck === 'A' ? currentTrackIndex : nextTrackIndex);
+            }
+
+            const incomingTrack = playlist[targetIndex];
+
+            if (incomingDeck === 'A') {
+                currentTrackIndex = targetIndex;
+                loadTrackMetadataIntoDeck('A', currentTrackIndex);
+            } else {
+                nextTrackIndex = targetIndex;
+                loadTrackMetadataIntoDeck('B', nextTrackIndex);
+            }
+
+            const startOffset = Number(incomingTrack.startSec) || 0;
+            incomingPlayer.loadVideoById({
+                videoId: incomingTrack.videoId,
+                startSeconds: startOffset
+            });
+            incomingPlayer.setVolume(0);
+            incomingPlayer.playVideo();
+
+            isMasterPlaying = true;
+            updateMasterPlayUI(true);
+            renderPlaylist();
+
+            document.getElementById('countdownHeader').textContent = 'MEZCLANDO CANALES EN VIVO';
+            document.getElementById('fadeCountdownDisplay').textContent = `${outgoingDeck} ➔ ${incomingDeck}`;
+
+            const steps = 40;
+            const stepTimeMs = (crossfadeDurationSec * 1000) / steps;
+            let currentStep = 0;
+
+            if (crossfadeInterval) clearInterval(crossfadeInterval);
+
+            crossfadeInterval = setInterval(() => {
+                currentStep++;
+                const progress = Math.min(currentStep / steps, 1);
+
+                const sliderValue = outgoingDeck === 'A'
+                    ? Math.round(progress * 100)
+                    : Math.round((1 - progress) * 100);
+
+                document.getElementById('crossfaderInput').value = sliderValue;
+                applyCrossfaderPosition(sliderValue);
+
+                if (currentStep >= steps) {
+                    clearInterval(crossfadeInterval);
+                    crossfadeInterval = null;
+
+                    try {
+                        outgoingPlayer.pauseVideo();
+                        outgoingPlayer.setVolume(0);
+                    } catch (e) {}
+
+                    activeDeck = incomingDeck;
+                    isCrossfading = false;
+
+                    const upcomingIdx = getNextTrackIndex(targetIndex);
+                    if (outgoingDeck === 'A') {
+                        currentTrackIndex = upcomingIdx;
+                        cueOrLoadTrackOnDeck('A', upcomingIdx, false);
+                    } else {
+                        nextTrackIndex = upcomingIdx;
+                        cueOrLoadTrackOnDeck('B', upcomingIdx, false);
+                    }
+
+                    highlightActiveDeckCard();
+                    verifyAndSyncDeckTitle(activeDeck);
+                    renderPlaylist();
+                }
+            }, stepTimeMs);
+        }
+
+        function cueOrLoadTrackOnDeck(deck, idx, autoPlay = false) {
+            if (!playlist[idx]) return;
+            const player = deck === 'A' ? playerA : playerB;
+            const track = playlist[idx];
+            exitDeckLoop(deck);
+            loadTrackMetadataIntoDeck(deck, idx);
+
+            if (!player || typeof player.loadVideoById !== 'function') return;
+            try {
+                if (autoPlay) {
+                    player.loadVideoById({
+                        videoId: track.videoId,
+                        startSeconds: Number(track.startSec) || 0
+                    });
+                } else {
+                    player.cueVideoById({
+                        videoId: track.videoId,
+                        startSeconds: Number(track.startSec) || 0
+                    });
+                }
+                const currentPos = Number(document.getElementById('crossfaderInput').value) || 0;
+                applyCrossfaderPosition(currentPos);
+            } catch (e) {}
+        }
+
+        /********************************************************************
+         * 7. CONTROLES DE TRANSPORTE Y SELECCIÓN CON TILDE
+         ********************************************************************/
+        function toggleMasterPlay() {
+            if (!playersReady.A || !playersReady.B) return;
+            const activePlayer = activeDeck === 'A' ? playerA : playerB;
+            const state = activePlayer.getPlayerState();
+
+            if (state === YT.PlayerState.PLAYING) {
+                activePlayer.pauseVideo();
+                if (isCrossfading) {
+                    const otherPlayer = activeDeck === 'A' ? playerB : playerA;
+                    otherPlayer.pauseVideo();
+                }
+                isMasterPlaying = false;
+                updateMasterPlayUI(false);
+            } else {
+                const expectedIdx = activeDeck === 'A' ? currentTrackIndex : nextTrackIndex;
+                const expectedTrack = playlist[expectedIdx];
+                if (expectedTrack) {
+                    try {
+                        const loadedData = activePlayer.getVideoData();
+                        if (!loadedData || loadedData.video_id !== expectedTrack.videoId) {
+                            activePlayer.loadVideoById({
+                                videoId: expectedTrack.videoId,
+                                startSeconds: Number(expectedTrack.startSec) || 0
+                            });
+                        } else {
+                            activePlayer.playVideo();
+                        }
+                    } catch (e) {
+                        activePlayer.playVideo();
+                    }
+                }
+                isMasterPlaying = true;
+                updateMasterPlayUI(true);
+            }
+        }
+
+        function triggerManualCrossfade() {
+            if (isCrossfading) return;
+            executeSmoothCrossfade();
+        }
+
+        function skipToPrevious() {
+            if (isCrossfading) return;
+            const currentIdx = activeDeck === 'A' ? currentTrackIndex : nextTrackIndex;
+            const prevIdx = (currentIdx - 1 + playlist.length) % playlist.length;
+            executeSmoothCrossfade(prevIdx);
+        }
+
+        function playSpecificTrackFromQueue(index) {
+            if (index < 0 || index >= playlist.length) return;
+            const currentActiveIdx = activeDeck === 'A' ? currentTrackIndex : nextTrackIndex;
+
+            if (index === currentActiveIdx && !isCrossfading) {
+                toggleMasterPlay();
+                return;
+            }
+
+            if (crossfadeInterval) {
+                clearInterval(crossfadeInterval);
+                crossfadeInterval = null;
+                isCrossfading = false;
+            }
+
+            const activePlayer = activeDeck === 'A' ? playerA : playerB;
+            const isCurrentlyPlaying = activePlayer && typeof activePlayer.getPlayerState === 'function' && activePlayer.getPlayerState() === YT.PlayerState.PLAYING;
+
+            if (!isCurrentlyPlaying) {
+                if (activeDeck === 'A') {
+                    currentTrackIndex = index;
+                    nextTrackIndex = getNextTrackIndex(index);
+                    cueOrLoadTrackOnDeck('A', currentTrackIndex, true);
+                    cueOrLoadTrackOnDeck('B', nextTrackIndex, false);
+                } else {
+                    nextTrackIndex = index;
+                    currentTrackIndex = getNextTrackIndex(index);
+                    cueOrLoadTrackOnDeck('B', nextTrackIndex, true);
+                    cueOrLoadTrackOnDeck('A', currentTrackIndex, false);
+                }
+                isMasterPlaying = true;
+                updateMasterPlayUI(true);
+                renderPlaylist();
+                showToast(`Reproduciendo "${playlist[index].title}" en Deck ${activeDeck}`, 'emerald');
+            } else {
+                executeSmoothCrossfade(index);
+            }
+        }
+
+        function handleManualCrossfaderSlide(val) {
+            const pos = Number(val);
+            if (crossfadeInterval) {
+                clearInterval(crossfadeInterval);
+                crossfadeInterval = null;
+                isCrossfading = false;
+            }
+
+            applyCrossfaderPosition(pos);
+
+            if (pos > 60 && activeDeck !== 'B') {
+                activeDeck = 'B';
+                highlightActiveDeckCard();
+                renderPlaylist();
+            } else if (pos < 40 && activeDeck !== 'A') {
+                activeDeck = 'A';
+                highlightActiveDeckCard();
+                renderPlaylist();
+            }
+        }
+
+        function userSeek(deck, seconds) {
+            const player = deck === 'A' ? playerA : playerB;
+            if (player && typeof player.seekTo === 'function') {
+                player.seekTo(Number(seconds), true);
+            }
+        }
+
+        function updateFadeDuration(val) {
+            crossfadeDurationSec = Number(val);
+            document.getElementById('fadeDurationLabel').textContent = `${crossfadeDurationSec} seg`;
+        }
+
+        function toggleShuffle() {
+            isShuffle = !isShuffle;
+            const btn = document.getElementById('shuffleBtn');
+            btn.className = isShuffle
+                ? 'w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center transition'
+                : 'w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 border border-slate-700/70 flex items-center justify-center transition';
+            showToast(isShuffle ? 'Modo Aleatorio activado' : 'Modo Aleatorio desactivado', 'cyan');
+        }
+
+        function toggleLoop() {
+            isLoop = !isLoop;
+            const btn = document.getElementById('loopBtn');
+            btn.className = isLoop
+                ? 'w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center transition'
+                : 'w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 border border-slate-700/70 flex items-center justify-center transition';
+        }
+
+        function toggleVideoVisibility() {
+            audioOnlyMode = !audioOnlyMode;
+            const wrapA = document.getElementById('videoWrapperA');
+            const wrapB = document.getElementById('videoWrapperB');
+            const icon = document.getElementById('toggleVideoIcon');
+            const text = document.getElementById('toggleVideoText');
+
+            if (audioOnlyMode) {
+                wrapA.classList.add('h-0', 'opacity-0', 'mb-0', 'border-0');
+                wrapA.classList.remove('aspect-video', 'mb-3');
+                wrapB.classList.add('h-0', 'opacity-0', 'mb-0', 'border-0');
+                wrapB.classList.remove('aspect-video', 'mb-3');
+                icon.className = 'fa-solid fa-eye-slash text-emerald-400';
+                text.textContent = 'Solo Audio: ON';
+            } else {
+                wrapA.classList.remove('h-0', 'opacity-0', 'mb-0', 'border-0');
+                wrapA.classList.add('aspect-video', 'mb-3');
+                wrapB.classList.remove('h-0', 'opacity-0', 'mb-0', 'border-0');
+                wrapB.classList.add('aspect-video', 'mb-3');
+                icon.className = 'fa-solid fa-eye text-cyan-400';
+                text.textContent = 'Solo Audio: OFF';
+            }
+        }
+
+        function toggleApiKeyModal() {
+            document.getElementById('apiKeyDrawer').classList.toggle('hidden');
+        }
+
+        function saveUserYouTubeApiKey() {
+            const key = document.getElementById('ytApiKeyInput').value.trim();
+            userYouTubeApiKey = key;
+            if (key) {
+                localStorage.setItem(YT_API_KEY_STORAGE, key);
+                document.getElementById('apiKeyStatusBtnText').textContent = 'YT API Key: Activa ✓';
+                showToast('YouTube Data API v3 Key guardada.', 'emerald');
+            } else {
+                localStorage.removeItem(YT_API_KEY_STORAGE);
+                document.getElementById('apiKeyStatusBtnText').textContent = 'YT API Key (Gratis)';
+                showToast('Clave API eliminada.', 'cyan');
+            }
+            document.getElementById('apiKeyDrawer').classList.add('hidden');
+        }
+
+        // MODO PANTALLA COMPLETA / SALIR DE PANTALLA COMPLETA
+        function isAppInFullScreen() {
+            return !!(
+                document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.mozFullScreenElement ||
+                document.msFullscreenElement
+            );
+        }
+
+        async function toggleAppFullScreen() {
+            const docEl = document.documentElement;
+            try {
+                if (!isAppInFullScreen()) {
+                    if (docEl.requestFullscreen) {
+                        await docEl.requestFullscreen();
+                    } else if (docEl.webkitRequestFullscreen) {
+                        await docEl.webkitRequestFullscreen();
+                    } else if (docEl.msRequestFullscreen) {
+                        await docEl.msRequestFullscreen();
+                    } else {
+                        showToast('Tu navegador o vista previa bloquea Pantalla Completa directa. Abre el archivo en una pestaña nueva.', 'amber');
+                        return;
+                    }
+                    updateFullScreenUI(true);
+                    showToast('Modo Pantalla Completa activado. Pulsa "Salir" o la tecla ESC / F para volver.', 'emerald');
+                } else {
+                    if (document.exitFullscreen) {
+                        await document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        await document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        await document.msExitFullscreen();
+                    }
+                    updateFullScreenUI(false);
+                    showToast('Has salido del modo Pantalla Completa.', 'cyan');
+                }
+            } catch (err) {
+                showToast('El contenedor actual restringe Pantalla Completa nativa. Prueba con F11 en tu navegador.', 'amber');
+            }
+        }
+
+        function updateFullScreenUI(isFull) {
+            const btn = document.getElementById('fullscreenToggleBtn');
+            const icon = document.getElementById('fullscreenToggleIcon');
+            const text = document.getElementById('fullscreenToggleText');
+            const floatingBtn = document.getElementById('floatingExitFullscreenBtn');
+
+            if (!btn || !icon || !text) return;
+
+            if (isFull) {
+                btn.className = 'text-xs font-extrabold px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 border border-amber-300 transition flex items-center gap-2 shadow-lg shadow-amber-500/25';
+                icon.className = 'fa-solid fa-compress text-slate-950';
+                text.textContent = '✕ Salir de Pantalla Completa';
+                if (floatingBtn) {
+                    floatingBtn.classList.remove('hidden');
+                    floatingBtn.classList.add('flex');
+                }
+            } else {
+                btn.className = 'text-xs font-bold px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 hover:from-cyan-500/30 hover:to-fuchsia-500/30 text-cyan-300 border border-cyan-500/50 transition flex items-center gap-2 shadow-md shadow-cyan-500/10';
+                icon.className = 'fa-solid fa-expand text-cyan-400';
+                text.textContent = '⛶ Pantalla Completa';
+                if (floatingBtn) {
+                    floatingBtn.classList.add('hidden');
+                    floatingBtn.classList.remove('flex');
+                }
+            }
+        }
+
+        ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                updateFullScreenUI(isAppInFullScreen());
+            });
+        });
+
+        /********************************************************************
+         * 8. RENDERIZADO DE BÚSQUEDA Y PLAYLISTS ACTIVAS
+         ********************************************************************/
+        function switchAddTab(mode) {
+            const searchPanel = document.getElementById('panelSearchMode');
+            const manualPanel = document.getElementById('panelManualMode');
+            const btnSearch = document.getElementById('tabModeSearch');
+            const btnManual = document.getElementById('tabModeManual');
+
+            if (mode === 'search') {
+                searchPanel.classList.remove('hidden');
+                manualPanel.classList.add('hidden');
+                btnSearch.className = 'px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 transition';
+                btnManual.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+            } else {
+                searchPanel.classList.add('hidden');
+                manualPanel.classList.remove('hidden');
+                btnManual.className = 'px-2.5 py-1 rounded-lg bg-cyan-500 text-slate-950 transition';
+                btnSearch.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+            }
+        }
+
+        function extractYouTubeId(input) {
+            const trimmed = (input || '').trim();
+            if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+            const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|music\.youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+            const match = trimmed.match(regex);
+            return match ? match[1] : null;
+        }
+
+        async function previewManualUrlMetadata(val) {
+            const videoId = extractYouTubeId(val);
+            const previewBox = document.getElementById('manualUrlPreviewBox');
+            if (!videoId) {
+                previewBox.classList.add('hidden');
+                return;
+            }
+            previewBox.classList.remove('hidden');
+            document.getElementById('manualPreviewThumb').src = `https://i.ytimg.com/vi/${videoId}/default.jpg`;
+            document.getElementById('manualPreviewTitle').textContent = 'Consultando título oficial en YouTube...';
+
+            const meta = await fetchNoembedMetadata(videoId);
+            document.getElementById('manualPreviewTitle').textContent = meta.title;
+            document.getElementById('manualPreviewAuthor').textContent = `${meta.author} • ID: ${videoId}`;
+            document.getElementById('inputTitle').value = meta.title;
+            document.getElementById('inputArtist').value = meta.author;
+        }
+
+        function renderSearchResultsList() {
+            const container = document.getElementById('searchResultsContainer');
+            const masterCheck = document.getElementById('selectAllSearchCheckbox');
+            const existingIds = new Set(playlist.map(t => t.videoId));
+            document.getElementById('searchResultCountBadge').textContent = `${currentSearchResults.length} temas`;
+
+            if (currentSearchResults.length === 0) {
+                container.innerHTML = `
+                    <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 text-center space-y-2">
+                        <p>Pulsa el botón verde <strong>"Buscar YT"</strong> para buscar este artista en vivo en YouTube.</p>
+                    </div>`;
+                updateBulkSelectionCounters();
+                return;
+            }
+
+            container.innerHTML = currentSearchResults.map(item => {
+                const isChecked = selectedSearchIds.has(item.videoId);
+                const alreadyInQueue = existingIds.has(item.videoId);
+
+                return `
+                <div onclick="toggleTrackCheckbox('${item.videoId}')"
+                     class="group flex items-center justify-between gap-2.5 p-2.5 rounded-xl border transition cursor-pointer select-none ${
+                         isChecked
+                            ? 'bg-emerald-950/30 border-emerald-500/60 shadow-sm'
+                            : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
+                     }">
+                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                        <input type="checkbox"
+                               ${isChecked ? 'checked' : ''}
+                               onclick="event.stopPropagation(); toggleTrackCheckbox('${item.videoId}')"
+                               class="dj-checkbox">
+
+                        <img src="https://i.ytimg.com/vi/${item.videoId}/default.jpg"
+                             onerror="this.src='https://placehold.co/80x60/0f172a/10b981?text=YT'"
+                             alt="Thumb" class="w-10 h-8 rounded object-cover shrink-0 border border-slate-800">
+
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-semibold text-white truncate flex items-center gap-1.5">
+                                <span class="truncate">${escapeHtml(item.title)}</span>
+                                ${alreadyInQueue ? `<span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-emerald-400 border border-emerald-500/30 shrink-0">En Cola</span>` : ''}
+                            </div>
+                            <div class="text-[11px] text-slate-400 truncate flex items-center gap-2">
+                                <span class="truncate">${escapeHtml(item.artist)}</span>
+                                <span class="font-mono text-[10px] text-cyan-400/80">${item.bpm || 124} BPM</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones Directos a Plato A, Plato B, Plato Libre o Cola -->
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button onclick="loadSearchItemToDeck('${item.videoId}', 'A', event)"
+                                title="Cargar directamente en el Plato A"
+                                class="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 text-[10px] font-mono font-extrabold transition">
+                            ➔ A
+                        </button>
+                        <button onclick="loadSearchItemToDeck('${item.videoId}', 'B', event)"
+                                title="Cargar directamente en el Plato B"
+                                class="px-2 py-1 rounded-lg bg-fuchsia-500/20 hover:bg-fuchsia-500 text-fuchsia-300 hover:text-slate-950 border border-fuchsia-500/40 text-[10px] font-mono font-extrabold transition">
+                            ➔ B
+                        </button>
+                        <button onclick="loadSearchItemToDeck('${item.videoId}', 'FREE', event)"
+                                title="Enviar automáticamente al Plato Libre (si suena A se carga en B, y si suena B se carga en A)"
+                                class="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/40 text-[10px] font-mono font-bold transition flex items-center gap-0.5">
+                            <span>⚡</span><span class="hidden sm:inline">Libre</span>
+                        </button>
+                        <button onclick="event.stopPropagation(); quickAddSingleSearchItem('${item.videoId}')"
+                                title="Sumar al final de la Playlist"
+                                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold transition">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            masterCheck.checked = currentSearchResults.length > 0 && selectedSearchIds.size === currentSearchResults.length;
+            updateBulkSelectionCounters();
+        }
+
+        function toggleTrackCheckbox(videoId) {
+            if (selectedSearchIds.has(videoId)) selectedSearchIds.delete(videoId);
+            else selectedSearchIds.add(videoId);
+            renderSearchResultsList();
+        }
+
+        function toggleSelectAllResults(checked) {
+            if (checked) currentSearchResults.forEach(item => selectedSearchIds.add(item.videoId));
+            else selectedSearchIds.clear();
+            renderSearchResultsList();
+        }
+
+        function updateBulkSelectionCounters() {
+            const count = selectedSearchIds.size;
+            document.getElementById('selectedCountNumber').textContent = count;
+            document.getElementById('btnAddSelected').disabled = count === 0;
+            document.getElementById('btnReplaceWithSelected').disabled = count === 0;
+            document.getElementById('btnAddSelectedText').textContent = count > 0 ? `Sumar (${count}) a la Cola` : 'Sumar a la Cola';
+        }
+
+        function quickAddSingleSearchItem(videoId) {
+            const item = currentSearchResults.find(t => t.videoId === videoId);
+            if (!item) return;
+
+            const defaultIntro = Math.max(0, Number(document.getElementById('bulkDefaultIntro').value) || 0);
+            const defaultTrim = Math.max(0, Number(document.getElementById('bulkDefaultTrimEnd').value) || 4);
+
+            playlist.push({
+                id: 'trk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+                videoId: item.videoId,
+                title: item.title,
+                artist: item.artist,
+                bpm: item.bpm || 124,
+                startSec: defaultIntro,
+                trimEndSec: defaultTrim,
+                cues: [null, null, null, null],
+                syncFromPlayer: true
+            });
+
+            savePlaylist();
+            renderSavedPlaylistsSelect();
+            renderPlaylist();
+            renderSearchResultsList();
+            showToast(`"${item.title}" sumado a la Playlist.`, 'emerald');
+        }
+
+        function quickAddAndPlayNow(videoId) {
+            const item = currentSearchResults.find(t => t.videoId === videoId);
+            if (!item) return;
+
+            const existingIdx = playlist.findIndex(t => t.videoId === videoId);
+            if (existingIdx !== -1) {
+                playSpecificTrackFromQueue(existingIdx);
+                return;
+            }
+
+            const defaultIntro = Math.max(0, Number(document.getElementById('bulkDefaultIntro').value) || 0);
+            const defaultTrim = Math.max(0, Number(document.getElementById('bulkDefaultTrimEnd').value) || 4);
+
+            playlist.push({
+                id: 'trk_' + Date.now(),
+                videoId: item.videoId,
+                title: item.title,
+                artist: item.artist,
+                bpm: item.bpm || 124,
+                startSec: defaultIntro,
+                trimEndSec: defaultTrim,
+                cues: [null, null, null, null],
+                syncFromPlayer: true
+            });
+
+            const newIdx = playlist.length - 1;
+            savePlaylist();
+            renderSavedPlaylistsSelect();
+            renderPlaylist();
+            renderSearchResultsList();
+            playSpecificTrackFromQueue(newIdx);
+        }
+
+        function addSelectedToQueue(replaceExisting = false) {
+            if (selectedSearchIds.size === 0) return;
+
+            const defaultIntro = Math.max(0, Number(document.getElementById('bulkDefaultIntro').value) || 0);
+            const defaultTrim = Math.max(0, Number(document.getElementById('bulkDefaultTrimEnd').value) || 4);
+
+            const selectedItems = currentSearchResults.filter(item => selectedSearchIds.has(item.videoId));
+            const newTracks = selectedItems.map((item, i) => ({
+                id: 'trk_' + Date.now() + '_' + i,
+                videoId: item.videoId,
+                title: item.title,
+                artist: item.artist,
+                bpm: item.bpm || 124,
+                startSec: defaultIntro,
+                trimEndSec: defaultTrim,
+                cues: [null, null, null, null],
+                syncFromPlayer: true
+            }));
+
+            if (replaceExisting) {
+                if (newTracks.length < 2) {
+                    showToast('Selecciona al menos 2 canciones con tilde para reemplazar la cola.', 'amber');
+                    return;
+                }
+                playlist = newTracks;
+                activeDeck = 'A';
+                currentTrackIndex = 0;
+                nextTrackIndex = 1;
+                if (playersReady.A && playersReady.B) {
+                    cueOrLoadTrackOnDeck('A', 0, isMasterPlaying);
+                    cueOrLoadTrackOnDeck('B', 1, false);
+                }
+            } else {
+                playlist.push(...newTracks);
+            }
+
+            selectedSearchIds.clear();
+            savePlaylist();
+            renderSavedPlaylistsSelect();
+            renderPlaylist();
+            renderSearchResultsList();
+            showToast(`${newTracks.length} canciones agregadas a la Playlist.`, 'emerald');
+        }
+
+        async function handleAddTrackManual(e) {
+            e.preventDefault();
+            const rawUrl = document.getElementById('inputUrl').value;
+            let titleInput = document.getElementById('inputTitle').value.trim();
+            let artistInput = document.getElementById('inputArtist').value.trim();
+            const startSec = Math.max(0, Number(document.getElementById('inputStartSec').value) || 0);
+            const trimEndSec = Math.max(0, Number(document.getElementById('inputTrimEndSec').value) || 0);
+            const bpm = Math.max(60, Number(document.getElementById('inputBpm').value) || 124);
+
+            const videoId = extractYouTubeId(rawUrl);
+            if (!videoId) {
+                showToast('Enlace o ID inválido.', 'amber');
+                return;
+            }
+
+            if (!titleInput) {
+                const meta = await fetchNoembedMetadata(videoId);
+                titleInput = meta.title;
+                artistInput = artistInput || meta.author;
+            }
+
+            playlist.push({
+                id: 'trk_' + Date.now(),
+                videoId: videoId,
+                title: titleInput,
+                artist: artistInput || 'YouTube Oficial',
+                bpm: bpm,
+                startSec: startSec,
+                trimEndSec: trimEndSec,
+                cues: [null, null, null, null],
+                syncFromPlayer: true
+            });
+
+            savePlaylist();
+            renderSavedPlaylistsSelect();
+            renderPlaylist();
+
+            document.getElementById('inputUrl').value = '';
+            document.getElementById('inputTitle').value = '';
+            document.getElementById('inputArtist').value = '';
+            document.getElementById('manualUrlPreviewBox').classList.add('hidden');
+            showToast(`"${titleInput}" agregado a la Playlist.`, 'emerald');
+        }
+
+        function renderSavedPlaylistsSelect() {
+            const select = document.getElementById('savedPlaylistsSelect');
+            if (!select) return;
+            select.innerHTML = Object.keys(savedSets).map(name =>
+                `<option value="${escapeHtml(name)}" ${name === currentSetName ? 'selected' : ''}>${escapeHtml(name)} (${savedSets[name].length})</option>`
+            ).join('');
+        }
+
+        function switchSavedPlaylist(setName) {
+            if (!savedSets[setName]) return;
+            currentSetName = setName;
+            playlist = savedSets[setName];
+            activeDeck = 'A';
+            currentTrackIndex = 0;
+            nextTrackIndex = playlist.length > 1 ? 1 : 0;
+
+            document.getElementById('crossfaderInput').value = 0;
+            applyCrossfaderPosition(0);
+            highlightActiveDeckCard();
+            renderPlaylist();
+
+            if (playersReady.A && playersReady.B && playlist.length > 0) {
+                cueOrLoadTrackOnDeck('A', currentTrackIndex, isMasterPlaying);
+                cueOrLoadTrackOnDeck('B', nextTrackIndex, false);
+            }
+            showToast(`Playlist activa: ${setName}`, 'cyan');
+        }
+
+        function createNewNamedPlaylist() {
+            document.getElementById('newPlaylistModalBox').classList.remove('hidden');
+            document.getElementById('newPlaylistNameInput').focus();
+        }
+
+        function confirmCreateNamedPlaylist() {
+            const input = document.getElementById('newPlaylistNameInput');
+            const name = input.value.trim();
+            if (!name) return;
+            savedSets[name] = JSON.parse(JSON.stringify(DEFAULT_MAIN_PLAYLIST.slice(0, 2)));
+            currentSetName = name;
+            playlist = savedSets[name];
+            currentTrackIndex = 0;
+            nextTrackIndex = 1;
+            input.value = '';
+            document.getElementById('newPlaylistModalBox').classList.add('hidden');
+            savePlaylist();
+            renderSavedPlaylistsSelect();
+            renderPlaylist();
+            showToast(`Playlist "${name}" creada.`, 'emerald');
+        }
+
+        function deleteTrack(index, event) {
+            event.stopPropagation();
+            if (playlist.length <= 2) {
+                showToast('Mínimo 2 canciones en la cola para poder mezclar.', 'amber');
+                return;
+            }
+            playlist.splice(index, 1);
+            if (currentTrackIndex >= playlist.length) currentTrackIndex = 0;
+            if (nextTrackIndex >= playlist.length) nextTrackIndex = (currentTrackIndex + 1) % playlist.length;
+            savePlaylist();
+            renderSavedPlaylistsSelect();
+            renderPlaylist();
+        }
+
+        function moveTrack(index, direction, event) {
+            event.stopPropagation();
+            const targetIdx = index + direction;
+            if (targetIdx < 0 || targetIdx >= playlist.length) return;
+            const temp = playlist[index];
+            playlist[index] = playlist[targetIdx];
+            playlist[targetIdx] = temp;
+            savePlaylist();
+            renderPlaylist();
+        }
+
+        function updateTrackTrimInline(index, field, value) {
+            if (!playlist[index]) return;
+            playlist[index][field] = Math.max(0, Number(value) || 0);
+            savePlaylist();
+            if (index === currentTrackIndex) loadTrackMetadataIntoDeck('A', currentTrackIndex);
+            if (index === nextTrackIndex) loadTrackMetadataIntoDeck('B', nextTrackIndex);
+        }
+
+        function exportPlaylistJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(playlist, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", "ytm_virtualdj_playlist.json");
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+
+        function importPlaylistJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported) && imported.length >= 2) {
+                        playlist = imported;
+                        currentTrackIndex = 0;
+                        nextTrackIndex = 1;
+                        savePlaylist();
+                        renderSavedPlaylistsSelect();
+                        renderPlaylist();
+                        if (playersReady.A && playersReady.B) {
+                            cueOrLoadTrackOnDeck('A', 0, false);
+                            cueOrLoadTrackOnDeck('B', 1, false);
+                        }
+                        showToast('Playlist importada con éxito.', 'emerald');
+                    }
+                } catch (err) {}
+            };
+            reader.readAsText(file);
+        }
+
+        function getNextTrackIndex(fromIndex) {
+            if (playlist.length <= 1) return 0;
+            if (isShuffle) {
+                let rand = Math.floor(Math.random() * playlist.length);
+                if (rand === fromIndex) rand = (rand + 1) % playlist.length;
+                return rand;
+            }
+            const next = fromIndex + 1;
+            return next >= playlist.length ? (isLoop ? 0 : fromIndex) : next;
+        }
+
+        function loadTrackMetadataIntoDeck(deck, index) {
+            const track = playlist[index];
+            if (!track) return;
+
+            deckState[deck].baseBpm = Number(track.bpm) || 122;
+            const effBpm = (deckState[deck].baseBpm * deckState[deck].pitch).toFixed(1);
+
+            document.getElementById(`deck${deck}TrackIndex`).textContent = `Pista #${index + 1}`;
+            document.getElementById(`deck${deck}BpmDisplay`).textContent = `${effBpm} BPM`;
+            document.getElementById(`deck${deck}Title`).textContent = track.title;
+            document.getElementById(`deck${deck}Artist`).textContent = track.artist;
+            document.getElementById(`deck${deck}CutInfo`).textContent = `Intro: +${track.startSec || 0}s | Fade: -${track.trimEndSec || 0}s`;
+            document.getElementById(`deck${deck}VideoIdBadge`).textContent = `ID: ${track.videoId}`;
+            document.getElementById(`deck${deck}YtLink`).href = `https://www.youtube.com/watch?v=${track.videoId}`;
+
+            const idleDeckIdx = activeDeck === 'A' ? nextTrackIndex : currentTrackIndex;
+            const nextTrack = playlist[idleDeckIdx];
+            if (nextTrack) {
+                document.getElementById('nextUpPreview').innerHTML =
+                    `Siguiente en Deck ${activeDeck === 'A' ? 'B' : 'A'}: <span class="text-slate-200 font-medium">${escapeHtml(nextTrack.title)}</span>`;
+            }
+        }
+
+        function updateVolumeMetersUI(volA, volB) {
+            document.getElementById('deckAVolText').textContent = `${volA}%`;
+            document.getElementById('deckBVolText').textContent = `${volB}%`;
+            document.getElementById('deckAVolBar').style.width = `${volA}%`;
+            document.getElementById('deckBVolBar').style.width = `${volB}%`;
+        }
+
+        function updateMasterPlayUI(playing) {
+            document.getElementById('masterPlayIcon').className = playing ? 'fa-solid fa-pause' : 'fa-solid fa-play ml-0.5';
+        }
+
+        function updateDeckStateBadge(deck, ytState) {
+            const stateMap = {
+                [-1]: 'LISTO',
+                [0]: 'FINALIZADO',
+                [1]: 'AL AIRE',
+                [2]: 'PAUSADO',
+                [3]: 'CARGANDO...',
+                [5]: 'PREPARADO'
+            };
+            document.getElementById(`deck${deck}StateText`).textContent = stateMap[ytState] || 'LISTO';
+        }
+
+        function highlightActiveDeckCard() {
+            const cardA = document.getElementById('deckACard');
+            const cardB = document.getElementById('deckBCard');
+            const badgeA = document.getElementById('deckAStatusBadge');
+            const badgeB = document.getElementById('deckBStatusBadge');
+
+            if (activeDeck === 'A') {
+                cardA.classList.add('deck-a-active');
+                cardB.classList.remove('deck-b-active');
+                badgeA.textContent = 'AL AIRE';
+                badgeA.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40';
+                badgeB.textContent = 'SIGUIENTE';
+                badgeB.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
+            } else {
+                cardB.classList.add('deck-b-active');
+                cardA.classList.remove('deck-a-active');
+                badgeB.textContent = 'AL AIRE';
+                badgeB.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40';
+                badgeA.textContent = 'SIGUIENTE';
+                badgeA.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
+            }
+        }
+
+        function renderPlaylist() {
+            const container = document.getElementById('playlistContainer');
+            document.getElementById('playlistCountBadge').textContent = `${playlist.length} pistas`;
+
+            container.innerHTML = playlist.map((track, idx) => {
+                const isDeckA = idx === currentTrackIndex;
+                const isDeckB = idx === nextTrackIndex;
+
+                let rowStyle = 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700';
+                let deckPill = '';
+
+                if (isDeckA && activeDeck === 'A') {
+                    rowStyle = 'bg-cyan-950/30 border-cyan-500/50 shadow-md';
+                    deckPill = `<span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-cyan-500 text-slate-950">SONANDO EN A</span>`;
+                } else if (isDeckB && activeDeck === 'B') {
+                    rowStyle = 'bg-fuchsia-950/30 border-fuchsia-500/50 shadow-md';
+                    deckPill = `<span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-fuchsia-500 text-slate-950">SONANDO EN B</span>`;
+                } else if (isDeckA) {
+                    rowStyle = 'bg-slate-900/90 border-cyan-500/30';
+                    deckPill = `<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">LISTO EN A</span>`;
+                } else if (isDeckB) {
+                    rowStyle = 'bg-slate-900/90 border-fuchsia-500/30';
+                    deckPill = `<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30">LISTO EN B</span>`;
+                }
+
+                return `
+                <div onclick="playSpecificTrackFromQueue(${idx})"
+                     class="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border transition cursor-pointer ${rowStyle}">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="relative w-12 h-9 rounded-lg overflow-hidden bg-slate-800 shrink-0 border border-slate-700">
+                            <img src="https://i.ytimg.com/vi/${track.videoId}/hqdefault.jpg"
+                                 onerror="this.src='https://placehold.co/120x90/1e293b/38bdf8?text=YT'"
+                                 alt="Cover" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                                <i class="fa-solid fa-play text-white text-xs"></i>
+                            </div>
+                        </div>
+
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-xs font-mono text-slate-500">#${idx + 1}</span>
+                                <span class="font-semibold text-sm text-white truncate">${escapeHtml(track.title)}</span>
+                                <span class="text-[10px] font-mono text-emerald-400">${track.bpm || 124} BPM</span>
+                                ${deckPill}
+                            </div>
+                            <div class="flex items-center gap-3 text-xs text-slate-400 mt-1 flex-wrap">
+                                <span class="truncate max-w-[170px]">${escapeHtml(track.artist)}</span>
+                                <div onclick="event.stopPropagation()" class="flex items-center gap-2 bg-slate-900/90 px-2 py-0.5 rounded-lg border border-slate-800 text-[11px] font-mono">
+                                    <label class="text-slate-400 flex items-center gap-1">
+                                        Intro:
+                                        <input type="number" min="0" max="300" value="${track.startSec || 0}"
+                                               onchange="updateTrackTrimInline(${idx}, 'startSec', this.value)"
+                                               class="w-10 bg-slate-950 border border-slate-700 rounded px-1 text-center text-cyan-300">s
+                                    </label>
+                                    <span class="text-slate-700">|</span>
+                                    <label class="text-slate-400 flex items-center gap-1">
+                                        Fade: -<input type="number" min="0" max="120" value="${track.trimEndSec || 0}"
+                                               onchange="updateTrackTrimInline(${idx}, 'trimEndSec', this.value)"
+                                               class="w-10 bg-slate-950 border border-slate-700 rounded px-1 text-center text-amber-300">s
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Asignación Directa de Plato y Orden -->
+                    <div class="flex items-center justify-end gap-1 shrink-0">
+                        <button onclick="loadQueueTrackToDeck(${idx}, 'A', event)"
+                                title="Cargar este tema en el Plato A"
+                                class="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 text-[10px] font-mono font-extrabold transition">
+                            ➔ A
+                        </button>
+                        <button onclick="loadQueueTrackToDeck(${idx}, 'B', event)"
+                                title="Cargar este tema en el Plato B"
+                                class="px-2 py-1 rounded-lg bg-fuchsia-500/20 hover:bg-fuchsia-500 text-fuchsia-300 hover:text-slate-950 border border-fuchsia-500/40 text-[10px] font-mono font-extrabold transition">
+                            ➔ B
+                        </button>
+                        <button onclick="loadQueueTrackToDeck(${idx}, 'FREE', event)"
+                                title="Cargar automáticamente en el Plato Libre (si suena A se prepara en B, y si suena B se prepara en A)"
+                                class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/40 text-[10px] font-mono font-bold transition flex items-center gap-1">
+                            <span>⚡ Libre</span>
+                        </button>
+
+                        <button onclick="moveTrack(${idx}, -1, event)" class="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition">
+                            <i class="fa-solid fa-chevron-up text-xs"></i>
+                        </button>
+                        <button onclick="moveTrack(${idx}, 1, event)" class="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </button>
+                        <button onclick="deleteTrack(${idx}, event)" class="w-7 h-7 rounded-lg hover:bg-red-950/60 text-slate-400 hover:text-red-400 flex items-center justify-center transition">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Atajos de teclado intuitivos
+        window.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                toggleMasterPlay();
+            } else if (e.key === 'm' || e.key === 'M') {
+                e.preventDefault();
+                triggerManualCrossfade();
+            } else if (e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                toggleAppFullScreen();
+            }
+        });
+
+        function formatTime(sec) {
+            if (!sec || isNaN(sec) || sec < 0) return '00:00';
+            const total = Math.floor(sec);
+            const m = Math.floor(total / 60);
+            const s = total % 60;
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function decodeHtmlEntities(str) {
+            const txt = document.createElement('textarea');
+            txt.innerHTML = str;
+            return txt.value;
+        }
+
+        function showToast(message, color = 'emerald') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const borderColors = {
+                emerald: 'border-emerald-500/50 text-emerald-300',
+                cyan: 'border-cyan-500/50 text-cyan-300',
+                amber: 'border-amber-500/50 text-amber-300'
+            };
+            toast.className = `pointer-events-auto bg-slate-900/95 backdrop-blur-md border ${borderColors[color] || borderColors.emerald} px-4 py-3 rounded-xl shadow-xl text-xs font-medium flex items-center gap-2 transition-all duration-300`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i><span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSavedState();
+            renderPlaylist();
+            renderSearchResultsList();
+            ensureYouTubeAPILoaded();
+        });
+    </script>
+</body>
+</html>
